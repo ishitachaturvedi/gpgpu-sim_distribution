@@ -65,7 +65,7 @@
 #include "power_stat.h"
 #include "stats.h"
 #include "visualizer.h"
-
+#include "gsi_prof.h"
 #ifdef GPGPUSIM_POWER_MODEL
 #include "power_interface.h"
 #else
@@ -79,7 +79,9 @@ class gpgpu_sim_wrapper {};
 #include <string>
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
+int stall_var;
+int stallDataT[32];
+int final_stall;
 bool g_interactive_debugger_enabled = false;
 
 tr1_hash_map<new_addr_type, unsigned> address_random_interleaving;
@@ -1773,11 +1775,13 @@ void gpgpu_sim::cycle() {
 
   if (clock_mask & DRAM) {
     for (unsigned i = 0; i < m_memory_config->m_n_mem; i++) {
+	    
       if (m_memory_config->simple_dram_model)
         m_memory_partition_unit[i]->simple_dram_model_cycle();
       else
         m_memory_partition_unit[i]
             ->dram_cycle();  // Issue the dram command (scheduler + delay model)
+
       // Update performance counters for DRAM
       m_memory_partition_unit[i]->set_dram_power_stats(
           m_power_stats->pwr_mem_stat->n_cmd[CURRENT_STAT_IDX][i],
@@ -1853,7 +1857,64 @@ void gpgpu_sim::cycle() {
         ((gpu_sim_cycle + gpu_tot_sim_cycle) >= g_single_step)) {
       raise(SIGTRAP);  // Debug breakpoint
     }
+
+    //GPU_stuff //Cycle ends here
+         //Add all data correctly in final stall array
+         for(int iw=0;iw<32;iw++)
+         {
+          stall_var=10; //warp alright
+          //idle stall least important
+          //if(activew[i]!=1)
+          if(idlew==1)
+          {
+                  //warp is idle
+                  stall_var=0;
+          }
+	  if(stall_var>tempw[iw])
+              stall_var=tempw[iw];
+          //stallData[cycle_num][iw]=stall_var;
+	  stallData[iw]=stall_var;
+         }
+         final_stall=10;
+	 //renumber stall by cycle importance
+         for(int iw=0;iw<32;iw++)
+	 {
+	  if(stallData[iw]==0)
+		  stallDataT[iw]=7;
+	  if(stallData[iw]==1)
+                  stallDataT[iw]=6;
+	  if(stallData[iw]==2)
+                  stallDataT[iw]=3;
+	  if(stallData[iw]==3)
+                  stallDataT[iw]=2;
+          if(stallData[iw]==4)
+                  stallDataT[iw]=1;
+	  if(stallData[iw]==5)
+                  stallDataT[iw]=5;
+	  if(stallData[iw]==6)
+                  stallDataT[iw]=4;
+	  if(stallData[iw]==10)
+                  stallDataT[iw]=0;
+	 }
+         
+	 final_stall=10;
+	 for(int iw=0;iw<32;iw++)
+	 {
+	    if(final_stall>stallDataT[iw])
+		    final_stall=stallDataT[iw];
+	 }
+         //printf("\n");
+	 //print stall data
+	 printf("\ncycle %d : stall %d",cycle_num,final_stall);
+
     gpu_sim_cycle++;
+
+    for(int i=0;i<32;i++)
+         {
+		tempw[i]=10;
+         }
+         idlew=0;
+         cycle_num=gpu_sim_cycle;
 
     if (g_interactive_debugger_enabled) gpgpu_debug();
 

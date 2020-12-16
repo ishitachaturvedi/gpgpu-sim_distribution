@@ -37,8 +37,33 @@
 #include "gpgpu-sim/icnt_wrapper.h"
 #include "option_parser.h"
 #include "stream_manager.h"
-
+#include "gpgpu-sim/gsi_prof.h"
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+#include<vector>
+using std::vector;
+
+//give initial size for number of cycles to be considered
+int initSize=50000;
+int cycle_num=0;
+//initialise vector of vectors as stallData[Cycle #][Warp #]
+vector<int> stallData;
+//define temp array to store data
+vector<int> tempw;
+//if warp active corresponding value set to 1
+vector<int> activew;
+int active_warp;
+int idlew=0;
+//give priority to different stalls
+//0-max priority
+//10-least priority
+int mem_str = 4;
+int mem_data = 3;
+int synco = 2;
+int comp_str = 6;
+int comp_data = 5;
+int control = 1;
+int idle = 0;
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
@@ -68,6 +93,18 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 }
 
 static void termination_callback() {
+  printf("The STALLS are\n0-no stall\n1-mem_str\n2-mem_data\n3-synchronization\n4-comp_str\n5-comp_data\n6-control stall\n7-idle stall\n");
+  int warp_print=5; //how many warp you want
+  int warp_iter=3000; //how many cycles you want to print
+  /*for(int i=0;i<warp_iter;i++)
+  { 
+	  printf("cycle %d: ",warp_iter);
+	  for(int j=0;j<warp_print;j++)
+	  {
+	   printf("%d ",stallData[i][j]);
+	  }
+	  printf("\n");
+  }*/
   printf("GPGPU-Sim: *** exit detected ***\n");
   fflush(stdout);
 }
@@ -75,6 +112,10 @@ static void termination_callback() {
 void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   atexit(termination_callback);
+  initSize=50000;
+  stallData.resize(32,10);
+  tempw.resize(32,10);
+  activew.resize(32,0);
   // concurrent kernel execution simulation thread
   do {
     if (g_debug_execution >= 3) {

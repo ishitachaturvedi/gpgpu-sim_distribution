@@ -45,6 +45,11 @@
 #include "mem_fetch.h"
 #include "mem_latency_stat.h"
 #include "shader.h"
+#include "gsi_prof.h"
+#include <iostream>
+#include <queue>
+
+int dramw[32];
 
 mem_fetch *partition_mf_allocator::alloc(new_addr_type addr,
                                          mem_access_type type, unsigned size,
@@ -223,6 +228,7 @@ void memory_partition_unit::simple_dram_model_cycle() {
   if (!m_dram_latency_queue.empty() &&
       ((m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) >=
        m_dram_latency_queue.front().ready_cycle)) {
+    std::cout<<"DRAM "<<m_dram_latency_queue.front().req<<std::endl;	  
     mem_fetch *mf_return = m_dram_latency_queue.front().req;
     if (mf_return->get_access_type() != L1_WRBK_ACC &&
         mf_return->get_access_type() != L2_WRBK_ACC) {
@@ -290,8 +296,10 @@ void memory_partition_unit::simple_dram_model_cycle() {
 void memory_partition_unit::dram_cycle() {
   // pop completed memory request from dram and push it to dram-to-L2 queue
   // of the original sub partition
+      //std::cout<<"1cycle number "<<cycle_num<<std::endl;
   mem_fetch *mf_return = m_dram->return_queue_top();
   if (mf_return) {
+      //std::cout<<"2cycle number "<<cycle_num<<std::endl;
     unsigned dest_global_spid = mf_return->get_sub_partition_id();
     int dest_spid = global_sub_partition_id_to_local_id(dest_global_spid);
     assert(m_sub_partition[dest_spid]->get_id() == dest_global_spid);
@@ -310,8 +318,12 @@ void memory_partition_unit::dram_cycle() {
       }
       m_dram->return_queue_pop();
     }
+
+      //std::cout<<"3cycle number "<<cycle_num<<std::endl;
   } else {
+      //std::cout<<"4cycle number "<<cycle_num<<std::endl;
     m_dram->return_queue_pop();
+      //std::cout<<"5cycle number "<<cycle_num<<std::endl;
   }
 
   m_dram->cycle();
@@ -329,7 +341,14 @@ void memory_partition_unit::dram_cycle() {
     if (!m_sub_partition[spid]->L2_dram_queue_empty() &&
         can_issue_to_dram(spid)) {
       mem_fetch *mf = m_sub_partition[spid]->L2_dram_queue_top();
-      if (m_dram->full(mf->is_write())) break;
+      //std::cout<<"6cycle number "<<cycle_num<<std::endl;
+      
+      if (m_dram->full(mf->is_write())) {break;
+      //DRAM store buffer full //GPU_stuff
+
+                        if(tempw[mf->get_wid()]>mem_str)
+                                tempw[mf->get_wid()]=mem_str;
+      }
 
       m_sub_partition[spid]->L2_dram_queue_pop();
       MEMPART_DPRINTF(
@@ -337,6 +356,7 @@ void memory_partition_unit::dram_cycle() {
           spid);
       dram_delay_t d;
       d.req = mf;
+      //push the warp in queue to be serviced
       d.ready_cycle = m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle +
                       m_config->dram_latency;
       m_dram_latency_queue.push_back(d);
@@ -344,19 +364,25 @@ void memory_partition_unit::dram_cycle() {
                      m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle);
       m_arbitration_metadata.borrow_credit(spid);
       break;  // the DRAM should only accept one request per cycle
+      //std::cout<<"7cycle number "<<cycle_num<<std::endl;
     }
   }
   //}
 
-  // DRAM latency queue
   if (!m_dram_latency_queue.empty() &&
       ((m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) >=
        m_dram_latency_queue.front().ready_cycle) &&
       !m_dram->full(m_dram_latency_queue.front().req->is_write())) {
+
+      //std::cout<<"10cycle number "<<cycle_num<<std::endl;
     mem_fetch *mf = m_dram_latency_queue.front().req;
+
+
     m_dram_latency_queue.pop_front();
     m_dram->push(mf);
+      //std::cout<<"11cycle number "<<cycle_num<<std::endl;
   }
+      //std::cout<<"end cycle number "<<cycle_num<<std::endl;
 }
 
 void memory_partition_unit::set_done(mem_fetch *mf) {
@@ -516,7 +542,13 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
         bool read_sent = was_read_sent(events);
         MEM_SUBPART_DPRINTF("Probing L2 cache Address=%llx, status=%u\n",
                             mf->get_addr(), status);
+        if(status==RESERVATION_FAIL)
+                {
 
+                        //MSHR FULL mem str talency //GPU_stuff
+                        if(tempw[mf->get_wid()]>mem_str)
+                                tempw[mf->get_wid()]=mem_str;
+                }
         if (status == HIT) {
           if (!write_sent) {
             // L2 cache replies
@@ -551,7 +583,6 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
         } else {
           assert(!write_sent);
           assert(!read_sent);
-          // L2 cache lock-up: will try again next cycle
         }
       }
     } else {
