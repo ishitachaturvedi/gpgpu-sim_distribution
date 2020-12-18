@@ -142,8 +142,16 @@ void shader_core_ctx::create_front_pipeline() {
   // m_icnt = new shader_memory_interface(this,cluster);
   if (m_config->gpgpu_perfect_mem) {
     m_icnt = new perfect_memory_interface(this, m_cluster);
+    if (m_config->perfect_inst_const_cache){
+      m_icnt2 = m_icnt;
+      printf("PrincetonUniversityWazHere\n");
+    }
+    else{
+      m_icnt2 = new shader_memory_interface(this, m_cluster);
+    }
   } else {
     m_icnt = new shader_memory_interface(this, m_cluster);
+    m_icnt2 = m_icnt;
   }
   m_mem_fetch_allocator =
       new shader_core_mem_fetch_allocator(m_sid, m_tpc, m_memory_config);
@@ -155,7 +163,7 @@ void shader_core_ctx::create_front_pipeline() {
   char name[STRSIZE];
   snprintf(name, STRSIZE, "L1I_%03d", m_sid);
   m_L1I = new read_only_cache(name, m_config->m_L1I_config, m_sid,
-                              get_shader_instruction_cache_id(), m_icnt,
+                              get_shader_instruction_cache_id(), m_icnt2,
                               IN_L1I_MISS_QUEUE);
 }
 
@@ -1990,7 +1998,7 @@ bool ldst_unit::constant_cycle(warp_inst_t &inst, mem_stage_stall_type &rc_fail,
   if (inst.active_count() == 0) return true;
 
   mem_stage_stall_type fail;
-  if (m_config->perfect_inst_const_cache) {
+  if (m_config->gpgpu_perfect_mem) {
     fail = NO_RC_FAIL;
     while (inst.accessq_count() > 0) inst.accessq_pop_back();
     if (inst.is_load()) {

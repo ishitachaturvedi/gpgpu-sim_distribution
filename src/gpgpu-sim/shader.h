@@ -2207,6 +2207,7 @@ class shader_core_ctx : public core_t {
 
   // interconnect interface
   mem_fetch_interface *m_icnt;
+  mem_fetch_interface *m_icnt2;
   shader_core_mem_fetch_allocator *m_mem_fetch_allocator;
 
   // fetch
