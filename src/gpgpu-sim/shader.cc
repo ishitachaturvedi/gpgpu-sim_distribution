@@ -912,8 +912,10 @@ void shader_core_ctx::fetch() {
             m_scoreboard->pendingWrites(warp_id) &&
             !m_warp[warp_id]->done_exit()) {
 		//mem_str stall //GPU_stuff
-		if(tempw[warp_id]>mem_str)
+		if(tempw[warp_id]>mem_str){
 			tempw[warp_id]=mem_str;
+			mem_str_c=1;
+		}
 	}
         // this code checks if this warp has finished executing and can be
         // reclaimed
@@ -985,8 +987,10 @@ void shader_core_ctx::fetch() {
             m_last_warp_fetched = warp_id;
             assert(status == RESERVATION_FAIL);
 	    //mem str //GPU_stuff
-            if(tempw[active_warp]>mem_str)
+            if(tempw[active_warp]>mem_str){
                           tempw[active_warp]=mem_str;
+			  mem_str_c=1;
+	    }
             delete mf;
           }
           break;
@@ -1173,11 +1177,13 @@ void scheduler_unit::cycle() {
                                                  // units (as in Maxwell and
                                                  // Pascal)
 
-    if (warp(warp_id).ibuffer_empty())
+    if (warp(warp_id).ibuffer_empty()){
       SCHED_DPRINTF(
           "Warp (warp_id %u, dynamic_warp_id %u) fails as ibuffer_empty\n",
           (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
-
+      //if(tempw[warp_id]>control)
+	     // tempw[warp_id]=control;
+    }
     if (warp(warp_id).waiting())
       SCHED_DPRINTF(
           "Warp (warp_id %u, dynamic_warp_id %u) fails as waiting for "
@@ -1215,14 +1221,18 @@ void scheduler_unit::cycle() {
           warp(warp_id).set_next_pc(pc);
           warp(warp_id).ibuffer_flush();
           //control stall has occured //GPU_stuff
-          if(tempw[warp_id]>control)
+          if(tempw[warp_id]>control){
                     tempw[warp_id]=control;
+		    control_c=1;
+	  }
         } else {
           valid_inst = true;
 	   if(m_scoreboard->checkCollision(warp_id, pI) ) {
                       //compute data stalls //GPU_stuff
-                      if(tempw[warp_id]>comp_data)
+                      if(tempw[warp_id]>comp_data){
                               tempw[warp_id]=comp_data;
+			      comp_data_c=1;
+		      }
           }
           if (!m_scoreboard->checkCollision(warp_id, pI)) {
             SCHED_DPRINTF(
@@ -1256,8 +1266,10 @@ void scheduler_unit::cycle() {
                    previous_issued_inst_exec_type != exec_unit_type_t::MEM))
 	      {
 		       //memory structure stall //GPU_stuff
-                                    if(tempw[warp_id]>mem_str)
+                                    if(tempw[warp_id]>mem_str){
                                             tempw[warp_id]=mem_str;
+					    mem_str_c=1;
+				    }
 
 	      }
             } else {
@@ -1280,8 +1292,10 @@ void scheduler_unit::cycle() {
               if(!sp_pipe_avail && !sfu_pipe_avail && !tensor_core_pipe_avail && !dp_pipe_avail && !int_pipe_avail)
                             {
                                     //comp str stall //GPU_stuff
-                                    if(tempw[warp_id]>comp_str)
+                                    if(tempw[warp_id]>comp_str){
                                             tempw[warp_id]=comp_str;
+					    comp_str_c=1;
+				    }
 
                             }
               // This code need to be refactored
@@ -1414,8 +1428,10 @@ void scheduler_unit::cycle() {
                 "Warp (warp_id %u, dynamic_warp_id %u) fails scoreboard\n",
                 (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
 	        //mem data stall //GPU_stuff
-		if(tempw[(*iter)->get_warp_id()]>comp_data)
+		if(tempw[(*iter)->get_warp_id()]>comp_data){
 			tempw[(*iter)->get_warp_id()]=comp_data;
+			comp_data_c=1;
+		}
           }
         }
       } else if (valid) {
@@ -1425,8 +1441,10 @@ void scheduler_unit::cycle() {
             "flush\n",
             (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
 	//ibuffer flush control stall
-	if(tempw[(*iter)->get_warp_id()]>control)
+	if(tempw[(*iter)->get_warp_id()]>control){
 		tempw[(*iter)->get_warp_id()]=control;
+		control_c=1;
+	}
         warp(warp_id).set_next_pc(pc);
         warp(warp_id).ibuffer_flush();
       }
@@ -1843,8 +1861,10 @@ bool ldst_unit::shared_cycle(warp_inst_t &inst, mem_stage_stall_type &rc_fail,
     fail_type = S_MEM;
     rc_fail = BK_CONF;
     //mem str stall //GPU_stuff
-       if(tempw[active_warp]>mem_str)
+       if(tempw[active_warp]>mem_str){
                tempw[active_warp]=mem_str;
+	       mem_str_c=1;
+       }
   } else
     rc_fail = NO_RC_FAIL;
   return !stall;
@@ -1878,8 +1898,10 @@ mem_stage_stall_type ldst_unit::process_cache_access(
   } else if (status == RESERVATION_FAIL) {
     result = BK_CONF;
     //mem_str stall //GPU_stuff
-       if(tempw[active_warp]>mem_str)
+       if(tempw[active_warp]>mem_str){
                tempw[active_warp]=mem_str;
+	       mem_str_c=1;
+       }
     assert(!read_sent);
     assert(!write_sent);
     delete mf;
@@ -1888,14 +1910,18 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     // inst.clear_active( access.get_warp_mask() ); // threads in mf writeback
     // when mf returns
     //mem_data stall  //GPU_stuff
-        if(tempw[active_warp]<mem_data)
+        if(tempw[active_warp]<mem_data){
                 tempw[active_warp]=mem_data;
+		mem_data_c=1;
+	}
     inst.accessq_pop_back();
   }
   if (!inst.accessq_empty() && result == NO_RC_FAIL) {result = COAL_STALL;
   //mem_data stall  //GPU_stuff
-        if(tempw[active_warp]<mem_data)
+        if(tempw[active_warp]<mem_data){
                 tempw[active_warp]=mem_data;
+		mem_data_c=1;
+	}
   }
   return result;
 }
@@ -1954,8 +1980,10 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
       } else {
         result = BK_CONF;
 	 //Mem_str stall //GPU_stuff
-                if(tempw[active_warp]>mem_str)
+                if(tempw[active_warp]>mem_str){
                      tempw[active_warp]=mem_str;
+		     mem_str_c=1;
+		}
         delete mf;
         break;  // do not try again, just break from the loop and try the next
                 // cycle
@@ -1963,8 +1991,10 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
     }
     if (!inst.accessq_empty() && result != BK_CONF) {result = COAL_STALL;
     //GPU stuff
-                if(tempw[active_warp]>mem_data)
+                if(tempw[active_warp]>mem_data){
                         tempw[active_warp]=mem_data;
+			mem_data_c=1;
+		}
 
     }
 
@@ -2020,8 +2050,10 @@ void ldst_unit::L1_latency_queue_cycle() {
         }
 	else{
         //Pending write stall //GPU_stuff
-        if (tempw[active_warp]<mem_str)
+        if (tempw[active_warp]<mem_str){
                                    tempw[active_warp]=mem_str;	
+				   mem_str_c=1;
+	}
 	}
 
 
@@ -2043,8 +2075,10 @@ void ldst_unit::L1_latency_queue_cycle() {
         assert(!read_sent);
         assert(!write_sent);
 	//GPU_stuff
-	 if (tempw[active_warp]<mem_str)
+	 if (tempw[active_warp]<mem_str){
                                    tempw[active_warp]=mem_str;
+				   mem_str_c=1;
+	 }
       } else {
         assert(status == MISS || status == HIT_RESERVED);
         l1_latency_queue[j][0] = NULL;
@@ -2154,8 +2188,10 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
   if (!inst.accessq_empty() && stall_cond == NO_RC_FAIL)
   {stall_cond = COAL_STALL;
 	  //GPU_stuff
-	  if(tempw[active_warp]>mem_data)
+	  if(tempw[active_warp]>mem_data){
                    tempw[active_warp]=mem_data;}
+         	  mem_data_c=1;
+  }
   if (stall_cond != NO_RC_FAIL) {
     stall_reason = stall_cond;
     bool iswrite = inst.is_store();
@@ -2490,8 +2526,10 @@ void ldst_unit::issue(register_set &reg_set) {
       if (reg_id > 0) {
         m_pending_writes[warp_id][reg_id] += n_accesses;
 	//mem_data pending writes //GPU_stuff
-            if(tempw[warp_id]>mem_data)
+            if(tempw[warp_id]>mem_data){
                     tempw[warp_id]=mem_data;
+		    mem_data_c=1;
+	    }
       }
     }
   }
@@ -3861,22 +3899,28 @@ bool shd_warp_t::waiting() {
     // waiting for other warps in CTA to reach barrier
     // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
-        if(tempw[active_warp]>synco)
+        if(tempw[active_warp]>synco){
                 tempw[active_warp]=synco;
+		synco_c=1;
+	}
 
     return true;
   } else if (m_shader->warp_waiting_at_mem_barrier(m_warp_id)) {
     // waiting for memory barrieri
     // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
-        if(tempw[active_warp]>synco)
+        if(tempw[active_warp]>synco){
                 tempw[active_warp]=synco;
+		synco_c=1;
+	}
     return true;
   } else if (m_n_atomic > 0) {
 	  // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
-        if(tempw[active_warp]>synco)
+        if(tempw[active_warp]>synco){
                 tempw[active_warp]=synco;
+		synco_c=1;
+	}
     // waiting for atomic operation to complete at memory:
     // this stall is not required for accurate timing model, but rather we
     // stall here since if a call/return instruction occurs in the meantime

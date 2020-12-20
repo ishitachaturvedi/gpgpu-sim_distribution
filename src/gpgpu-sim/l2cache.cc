@@ -346,8 +346,10 @@ void memory_partition_unit::dram_cycle() {
       if (m_dram->full(mf->is_write())) {break;
       //DRAM store buffer full //GPU_stuff
 
-                        if(tempw[mf->get_wid()]>mem_str)
+                        if(tempw[mf->get_wid()]>mem_str){
                                 tempw[mf->get_wid()]=mem_str;
+				mem_str_c=1;
+			}
       }
 
       m_sub_partition[spid]->L2_dram_queue_pop();
@@ -546,8 +548,10 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
                 {
 
                         //MSHR FULL mem str talency //GPU_stuff
-                        if(tempw[mf->get_wid()]>mem_str)
+                        if(tempw[mf->get_wid()]>mem_str){
                                 tempw[mf->get_wid()]=mem_str;
+				mem_str_c=1;
+			}
                 }
         if (status == HIT) {
           if (!write_sent) {

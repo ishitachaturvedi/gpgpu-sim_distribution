@@ -81,9 +81,18 @@ class gpgpu_sim_wrapper {};
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 int stall_var;
 int stallDataT[32];
+int countwc=0;
 int final_stall;
 bool g_interactive_debugger_enabled = false;
 
+float mem_str_cw = 0;
+float mem_data_cw = 0;
+float synco_cw = 0;
+float comp_str_cw = 0;
+float comp_data_cw = 0;
+float control_cw = 0;
+float idle_cw = 0;
+int warp_active=1; //set number of active warps
 tr1_hash_map<new_addr_type, unsigned> address_random_interleaving;
 
 /* Clock Domains */
@@ -1858,13 +1867,14 @@ void gpgpu_sim::cycle() {
       raise(SIGTRAP);  // Debug breakpoint
     }
 
+    //p
     //GPU_stuff //Cycle ends here
          //Add all data correctly in final stall array
-         for(int iw=0;iw<32;iw++)
+	 //in a warp assign relative importance to stalls
+         for(int iw=0;iw<warp_active;iw++)
          {
           stall_var=10; //warp alright
           //idle stall least important
-          //if(activew[i]!=1)
           if(idlew==1)
           {
                   //warp is idle
@@ -1873,11 +1883,15 @@ void gpgpu_sim::cycle() {
 	  if(stall_var>tempw[iw])
               stall_var=tempw[iw];
           //stallData[cycle_num][iw]=stall_var;
+          //printf(" %d ",stall_var);
 	  stallData[iw]=stall_var;
          }
          final_stall=10;
 	 //renumber stall by cycle importance
-         for(int iw=0;iw<32;iw++)
+	 //printf("\n");
+	 //Between warps assign relative importance to stalls
+	 //Stall Values come from src/gpgpusim_entrypoint.cc. Change stall values to vary relative ordering
+         for(int iw=0;iw<warp_active;iw++)
 	 {
 	  if(stallData[iw]==0)
 		  stallDataT[iw]=7;
@@ -1898,16 +1912,51 @@ void gpgpu_sim::cycle() {
 	 }
          
 	 final_stall=10;
-	 for(int iw=0;iw<32;iw++)
+	 for(int iw=0;iw<warp_active;iw++)
 	 {
 	    if(final_stall>stallDataT[iw])
 		    final_stall=stallDataT[iw];
 	 }
          //printf("\n");
 	 //print stall data
-	 printf("\ncycle %d : stall %d",cycle_num,final_stall);
+	 //print for GSI
+	printf("\ncycle %d : stall %d",cycle_num,final_stall);
+	//
+	//bucketing prints
+	
+	//Caclulation for stall bucketing
+	 countwc=mem_str_c;
+	 countwc=countwc+mem_data_c;
+	 countwc=countwc+synco_c;
+	 countwc=countwc+comp_str_c;
+	 countwc=countwc+comp_data_c;
+	 countwc=countwc+control_c;
+	 countwc=countwc+idlew;
 
+	 if(countwc==0)
+		 countwc=1;
+	 mem_str_cw=float(mem_str_c)/countwc;
+         mem_data_cw=float(mem_data_c)/countwc;
+         synco_cw=float(synco_c)/countwc;
+         comp_str_cw=float(comp_str_c)/countwc;
+	 comp_data_cw=float(comp_data_c)/countwc;
+	 control_cw=float(control_c)/countwc;
+	 idle_cw=float(idlew)/countwc;
+
+//Bucketed stall output
+	 //printf("\ncycle %d : mem_str %f mem_data %f synco %f comp_str %f comp_data %f control %f idle %f done",cycle_num,mem_str_cw,mem_data_cw,synco_cw,comp_str_cw,comp_data_cw,control_cw,idle_cw);
+
+	 //New cycle starts
     gpu_sim_cycle++;
+
+    countwc=0;
+    mem_str_c=0;
+    mem_data_c=0;
+    synco_c=0;
+    comp_str_c=0;
+    comp_data_c=0;
+    control_c=0;
+    //idle_c=0;
 
     for(int i=0;i<32;i++)
          {

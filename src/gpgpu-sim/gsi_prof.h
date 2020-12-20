@@ -34,3 +34,13 @@ extern int comp_data;
 extern int control;
 extern int idle;
 extern int idlew;
+
+//counters for checking if a stall type is hit for bucketing
+extern int mem_str_c;
+extern int mem_data_c;
+extern int synco_c;
+extern int comp_str_c;
+extern int comp_data_c;
+extern int control_c;
+extern int idle_c;
+extern int idlew_c;

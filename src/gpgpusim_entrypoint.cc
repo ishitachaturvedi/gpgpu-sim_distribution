@@ -57,6 +57,7 @@ int idlew=0;
 //give priority to different stalls
 //0-max priority
 //10-least priority
+////change assigned values to flip level of importance
 int mem_str = 4;
 int mem_data = 3;
 int synco = 2;
@@ -64,6 +65,14 @@ int comp_str = 6;
 int comp_data = 5;
 int control = 1;
 int idle = 0;
+
+int mem_str_c = 0;
+int mem_data_c = 0;
+int synco_c = 0;
+int comp_str_c = 0;
+int comp_data_c = 0;
+int control_c = 0;
+int idle_c = 0;
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
@@ -94,17 +103,6 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 
 static void termination_callback() {
   printf("The STALLS are\n0-no stall\n1-mem_str\n2-mem_data\n3-synchronization\n4-comp_str\n5-comp_data\n6-control stall\n7-idle stall\n");
-  int warp_print=5; //how many warp you want
-  int warp_iter=3000; //how many cycles you want to print
-  /*for(int i=0;i<warp_iter;i++)
-  { 
-	  printf("cycle %d: ",warp_iter);
-	  for(int j=0;j<warp_print;j++)
-	  {
-	   printf("%d ",stallData[i][j]);
-	  }
-	  printf("\n");
-  }*/
   printf("GPGPU-Sim: *** exit detected ***\n");
   fflush(stdout);
 }
@@ -112,6 +110,7 @@ static void termination_callback() {
 void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   atexit(termination_callback);
+  //appropriately sizing arrays for use
   initSize=50000;
   stallData.resize(32,10);
   tempw.resize(32,10);
