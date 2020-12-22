@@ -977,6 +977,9 @@ void shader_core_ctx::fetch() {
           if (status == MISS) {
             m_last_warp_fetched = warp_id;
             m_warp[warp_id]->set_imiss_pending();
+	    if(tempw[warp_id]>imisspendingw)
+		    tempw[warp_id]=imisspendingw;
+	    //imisspending_c=1;
             m_warp[warp_id]->set_last_fetch(m_gpu->gpu_sim_cycle);
           } else if (status == HIT) {
             m_last_warp_fetched = warp_id;
@@ -1036,10 +1039,14 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
   } else if (next_inst->op == MEMORY_BARRIER_OP) {
     m_warp[warp_id]->set_membar();
   }
-
   updateSIMTStack(warp_id, *pipe_reg);
 
   m_scoreboard->reserveRegisters(*pipe_reg);
+  //add register to appropriate operation register reserve mem or inst
+  if(next_inst->op==LOAD_OP||next_inst->op==TENSOR_CORE_LOAD_OP||next_inst->op==TENSOR_CORE_STORE_OP||next_inst->op==STORE_OP)
+	  m_scoreboard->reserveRegistersMem(*pipe_reg);
+  if(next_inst->op==SFU_OP||next_inst->op==TENSOR_CORE_OP||next_inst->op==DP_OP||next_inst->op==SP_OP||next_inst->op==INTP_OP||next_inst->op==ALU_SFU_OP)
+	  m_scoreboard->reserveRegistersComp(*pipe_reg);
   m_warp[warp_id]->set_next_pc(next_inst->pc + next_inst->isize);
 }
 
@@ -1178,6 +1185,10 @@ void scheduler_unit::cycle() {
                                                  // Pascal)
 
     if (warp(warp_id).ibuffer_empty()){
+	    //ibuffer empty
+	    if(tempw[warp_id]>ibufferw)
+		    tempw[warp_id]=ibufferw;
+	    //ibuffer_c=1;
       SCHED_DPRINTF(
           "Warp (warp_id %u, dynamic_warp_id %u) fails as ibuffer_empty\n",
           (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
@@ -1227,12 +1238,19 @@ void scheduler_unit::cycle() {
 	  }
         } else {
           valid_inst = true;
-	   if(m_scoreboard->checkCollision(warp_id, pI) ) {
+	   if(m_scoreboard->checkCollisionComp(warp_id, pI) ) {
                       //compute data stalls //GPU_stuff
                       if(tempw[warp_id]>comp_data){
                               tempw[warp_id]=comp_data;
 			      comp_data_c=1;
 		      }
+          }
+	  if(m_scoreboard->checkCollisionMem(warp_id, pI) ) {
+                      //compute data stalls //GPU_stuff
+                      if(tempw[warp_id]>mem_data){
+                              tempw[warp_id]=mem_data;
+                              mem_data_c=1;
+                      }
           }
           if (!m_scoreboard->checkCollision(warp_id, pI)) {
             SCHED_DPRINTF(
@@ -1834,6 +1852,9 @@ void shader_core_ctx::writeback() {
     m_operand_collector.writeback(*pipe_reg);
     unsigned warp_id = pipe_reg->warp_id();
     m_scoreboard->releaseRegisters(pipe_reg);
+    //check for whether the reg being released is mem or comp is inside the releaseRegister function. Call the functions here and appproprie registers will be released
+    m_scoreboard->releaseRegistersMem(pipe_reg);
+    m_scoreboard->releaseRegistersComp(pipe_reg);
     m_warp[warp_id]->dec_inst_in_pipeline();
     warp_inst_complete(*pipe_reg);
     m_gpu->gpu_sim_insn_last_update_sid = m_sid;
@@ -2043,6 +2064,10 @@ void ldst_unit::L1_latency_queue_cycle() {
                 m_pending_writes[mf_next->get_inst().warp_id()].erase(
                     mf_next->get_inst().out[r]);
                 m_scoreboard->releaseRegister(mf_next->get_inst().warp_id(),
+                                              mf_next->get_inst().out[r]);
+		m_scoreboard->releaseRegisterMem(mf_next->get_inst().warp_id(),
+                                              mf_next->get_inst().out[r]);
+		m_scoreboard->releaseRegisterComp(mf_next->get_inst().warp_id(),
                                               mf_next->get_inst().out[r]);
                 m_core->warp_inst_complete(mf_next->get_inst());
               }
@@ -2779,6 +2804,8 @@ void ldst_unit::cycle() {
                 m_pending_writes[warp_id].end()) {
               if (m_pending_writes[warp_id][reg_id] > 0) {
                 pending_requests = true;
+		if(tempw[warp_id]>mem_data)
+			tempw[warp_id]=mem_data;
                 break;
               } else {
                 // this instruction is done already

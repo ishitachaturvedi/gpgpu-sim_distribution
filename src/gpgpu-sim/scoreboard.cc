@@ -30,7 +30,7 @@
 #include "../cuda-sim/ptx_sim.h"
 #include "shader.h"
 #include "shader_trace.h"
-
+#include<iostream>
 // Constructor
 Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
     : longopregs() {
@@ -38,7 +38,10 @@ Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
   // Initialize size of table
   reg_table.resize(n_warps);
   longopregs.resize(n_warps);
-
+  reg_table_mem.resize(n_warps);
+  reg_table_comp.resize(n_warps); 
+  longopregs_mem.resize(n_warps);
+  longopregs_comp.resize(n_warps); 
   m_gpu = gpu;
 }
 
@@ -68,12 +71,32 @@ void Scoreboard::reserveRegister(unsigned wid, unsigned regnum) {
   reg_table[wid].insert(regnum);
 }
 
+void Scoreboard::reserveRegisterMem(unsigned wid, unsigned regnum) {
+  reg_table_mem[wid].insert(regnum);
+}
+
+void Scoreboard::reserveRegisterComp(unsigned wid, unsigned regnum) {
+  reg_table_comp[wid].insert(regnum);
+}
+
 // Unmark register as write-pending
 void Scoreboard::releaseRegister(unsigned wid, unsigned regnum) {
   if (!(reg_table[wid].find(regnum) != reg_table[wid].end())) return;
   SHADER_DPRINTF(SCOREBOARD, "Release register - warp:%d, reg: %d\n", wid,
                  regnum);
   reg_table[wid].erase(regnum);
+}
+
+//unmark registers as write Pending for mem operations
+void Scoreboard::releaseRegisterMem(unsigned wid, unsigned regnum) {
+  if (!(reg_table_mem[wid].find(regnum) != reg_table_mem[wid].end())) return;
+  reg_table_mem[wid].erase(regnum);
+}
+
+//unmark registers as write pending for comp operations
+void Scoreboard::releaseRegisterComp(unsigned wid, unsigned regnum) {
+  if (!(reg_table_comp[wid].find(regnum) != reg_table_comp[wid].end())) return;
+  reg_table_comp[wid].erase(regnum);
 }
 
 const bool Scoreboard::islongop(unsigned warp_id, unsigned regnum) {
@@ -106,6 +129,59 @@ void Scoreboard::reserveRegisters(const class warp_inst_t* inst) {
   }
 }
 
+void Scoreboard::reserveRegistersMem(const class warp_inst_t* inst) {
+  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+    if (inst->out[r] > 0) {
+      reserveRegisterMem(inst->warp_id(), inst->out[r]);
+      SHADER_DPRINTF(SCOREBOARD, "Reserved register - warp:%d, reg: %d\n",
+                     inst->warp_id(), inst->out[r]);
+    }
+  }
+
+  // Keep track of long operations
+  if (inst->is_load() && (inst->space.get_type() == global_space ||
+                          inst->space.get_type() == local_space ||
+                          inst->space.get_type() == param_space_kernel ||
+                          inst->space.get_type() == param_space_local ||
+                          inst->space.get_type() == param_space_unclassified ||
+                          inst->space.get_type() == tex_space)) {
+    for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+      if (inst->out[r] > 0) {
+        SHADER_DPRINTF(SCOREBOARD, "New longopreg marked - warp:%d, reg: %d\n",
+                       inst->warp_id(), inst->out[r]);
+        longopregs_mem[inst->warp_id()].insert(inst->out[r]);
+      }
+    }
+  }
+}
+
+void Scoreboard::reserveRegistersComp(const class warp_inst_t* inst) {
+  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+    if (inst->out[r] > 0) {
+      reserveRegisterComp(inst->warp_id(), inst->out[r]);
+      SHADER_DPRINTF(SCOREBOARD, "Reserved register - warp:%d, reg: %d\n",
+                     inst->warp_id(), inst->out[r]);
+    }
+  }
+
+  // Keep track of long operations
+  if (inst->is_load() && (inst->space.get_type() == global_space ||
+                          inst->space.get_type() == local_space ||
+                          inst->space.get_type() == param_space_kernel ||
+                          inst->space.get_type() == param_space_local ||
+                          inst->space.get_type() == param_space_unclassified ||
+                          inst->space.get_type() == tex_space)) {
+    for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+      if (inst->out[r] > 0) {
+        SHADER_DPRINTF(SCOREBOARD, "New longopreg marked - warp:%d, reg: %d\n",
+                       inst->warp_id(), inst->out[r]);
+        longopregs_comp[inst->warp_id()].insert(inst->out[r]);
+      }
+    }
+  }
+}
+
+
 // Release registers for an instruction
 void Scoreboard::releaseRegisters(const class warp_inst_t* inst) {
   for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
@@ -114,6 +190,26 @@ void Scoreboard::releaseRegisters(const class warp_inst_t* inst) {
                      inst->warp_id(), inst->out[r]);
       releaseRegister(inst->warp_id(), inst->out[r]);
       longopregs[inst->warp_id()].erase(inst->out[r]);
+    }
+  }
+}
+
+// Release registers for a mem instruction
+void Scoreboard::releaseRegistersMem(const class warp_inst_t* inst) {
+  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+    if (inst->out[r] > 0) {
+      releaseRegisterMem(inst->warp_id(), inst->out[r]);
+      longopregs_mem[inst->warp_id()].erase(inst->out[r]);
+    }
+  }
+}
+
+// Release registers for a comp instruction
+void Scoreboard::releaseRegistersComp(const class warp_inst_t* inst) {
+  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+    if (inst->out[r] > 0) {
+      releaseRegisterComp(inst->warp_id(), inst->out[r]);
+      longopregs_comp[inst->warp_id()].erase(inst->out[r]);
     }
   }
 }
@@ -149,6 +245,63 @@ bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst) const {
   return false;
 }
 
+bool Scoreboard::checkCollisionMem(unsigned wid, const class inst_t* inst) const {
+  // Get list of all input and output registers
+  std::set<int> inst_regs;
+
+  for (unsigned iii = 0; iii < inst->outcount; iii++)
+    inst_regs.insert(inst->out[iii]);
+
+  for (unsigned jjj = 0; jjj < inst->incount; jjj++)
+    inst_regs.insert(inst->in[jjj]);
+
+  if (inst->pred > 0) inst_regs.insert(inst->pred);
+  if (inst->ar1 > 0) inst_regs.insert(inst->ar1);
+  if (inst->ar2 > 0) inst_regs.insert(inst->ar2);
+
+  // Check for collision, get the intersection of reserved registers and
+  // instruction registers
+  std::set<int>::const_iterator it2;
+  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
+    if (reg_table_mem[wid].find(*it2) != reg_table_mem[wid].end()) {
+      return true;
+    }
+  return false;
+}
+
+bool Scoreboard::checkCollisionComp(unsigned wid, const class inst_t* inst) const {
+  // Get list of all input and output registers
+  std::set<int> inst_regs;
+
+  for (unsigned iii = 0; iii < inst->outcount; iii++)
+    inst_regs.insert(inst->out[iii]);
+
+  for (unsigned jjj = 0; jjj < inst->incount; jjj++)
+    inst_regs.insert(inst->in[jjj]);
+
+  if (inst->pred > 0) inst_regs.insert(inst->pred);
+  if (inst->ar1 > 0) inst_regs.insert(inst->ar1);
+  if (inst->ar2 > 0) inst_regs.insert(inst->ar2);
+
+  // Check for collision, get the intersection of reserved registers and
+  // instruction registers
+  std::set<int>::const_iterator it2;
+  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
+    if (reg_table_comp[wid].find(*it2) != reg_table_comp[wid].end()) {
+      return true;
+    }
+  return false;
+}
+
 bool Scoreboard::pendingWrites(unsigned wid) const {
   return !reg_table[wid].empty();
 }
+
+bool Scoreboard::pendingWritesMem(unsigned wid) const {
+  return !reg_table_mem[wid].empty();
+}
+
+bool Scoreboard::pendingWritesComp(unsigned wid) const {
+  return !reg_table_comp[wid].empty();
+}
+

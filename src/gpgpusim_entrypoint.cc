@@ -58,6 +58,7 @@ int idlew=0;
 //0-max priority
 //10-least priority
 ////change assigned values to flip level of importance
+////to make any check inactive change valye of check to > initial value of temp
 int mem_str = 4;
 int mem_data = 3;
 int synco = 2;
@@ -65,7 +66,9 @@ int comp_str = 6;
 int comp_data = 5;
 int control = 1;
 int idle = 0;
-
+int ibufferw = 100;
+int imisspendingw = 100;
+//variables for bucketing
 int mem_str_c = 0;
 int mem_data_c = 0;
 int synco_c = 0;
@@ -73,7 +76,8 @@ int comp_str_c = 0;
 int comp_data_c = 0;
 int control_c = 0;
 int idle_c = 0;
-
+int ibuffer_c = 0;
+int imisspending_c = 0;
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
 

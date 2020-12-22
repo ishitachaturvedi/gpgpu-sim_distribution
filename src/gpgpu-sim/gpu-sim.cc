@@ -1920,7 +1920,7 @@ void gpgpu_sim::cycle() {
          //printf("\n");
 	 //print stall data
 	 //print for GSI
-	printf("\ncycle %d : stall %d",cycle_num,final_stall);
+	//printf("\ncycle %d : stall %d",cycle_num,final_stall);
 	//
 	//bucketing prints
 	
