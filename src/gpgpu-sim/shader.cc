@@ -2060,6 +2060,11 @@ void ldst_unit::L1_latency_queue_cycle() {
               unsigned still_pending =
                   --m_pending_writes[mf_next->get_inst().warp_id()]
                                     [mf_next->get_inst().out[r]];
+	      if(still_pending)
+	      {
+		      if(tempw[warp_id]>ocpending)
+                        tempw[warp_id]=ocpending;
+	      }
               if (!still_pending) {
                 m_pending_writes[mf_next->get_inst().warp_id()].erase(
                     mf_next->get_inst().out[r]);
@@ -2074,11 +2079,9 @@ void ldst_unit::L1_latency_queue_cycle() {
             }
         }
 	else{
-        //Pending write stall //GPU_stuff
-        if (tempw[active_warp]<mem_str){
-                                   tempw[active_warp]=mem_str;	
-				   mem_str_c=1;
-	}
+        //Pending OC stall //GPU_stuff
+	if(tempw[warp_id]>ocpending)
+                        tempw[warp_id]=ocpending;
 	}
 
 
@@ -2201,8 +2204,11 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
       // inst.clear_active( access.get_warp_mask() );
       if (inst.is_load()) {
         for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++)
-          if (inst.out[r] > 0)
+          if (inst.out[r] > 0){
             assert(m_pending_writes[inst.warp_id()][inst.out[r]] > 0);
+	    if(tempw[warp_id]>ocpending)
+                        tempw[warp_id]=ocpending;
+	  }
       } else if (inst.is_store())
         m_core->inc_store_req(inst.warp_id());
     }
@@ -2550,11 +2556,9 @@ void ldst_unit::issue(register_set &reg_set) {
       unsigned reg_id = inst->out[r];
       if (reg_id > 0) {
         m_pending_writes[warp_id][reg_id] += n_accesses;
-	//mem_data pending writes //GPU_stuff
-            if(tempw[warp_id]>mem_data){
-                    tempw[warp_id]=mem_data;
-		    mem_data_c=1;
-	    }
+	//OC pending writes //GPU_stuff
+	if(tempw[warp_id]>ocpending)
+                        tempw[warp_id]=ocpending;
       }
     }
   }
@@ -2577,7 +2581,12 @@ void ldst_unit::writeback() {
             assert(m_pending_writes[m_next_wb.warp_id()][m_next_wb.out[r]] > 0);
             unsigned still_pending =
                 --m_pending_writes[m_next_wb.warp_id()][m_next_wb.out[r]];
-            if (!still_pending) {
+            if(still_pending)
+	    {
+		    if(tempw[warp_id]>ocpending)
+                        tempw[warp_id]=ocpending;
+	    }
+	    if (!still_pending) {
               m_pending_writes[m_next_wb.warp_id()].erase(m_next_wb.out[r]);
               m_scoreboard->releaseRegister(m_next_wb.warp_id(),
                                             m_next_wb.out[r]);
@@ -2804,8 +2813,8 @@ void ldst_unit::cycle() {
                 m_pending_writes[warp_id].end()) {
               if (m_pending_writes[warp_id][reg_id] > 0) {
                 pending_requests = true;
-		if(tempw[warp_id]>mem_data)
-			tempw[warp_id]=mem_data;
+		if(tempw[warp_id]>ocpending)
+			tempw[warp_id]=ocpending;
                 break;
               } else {
                 // this instruction is done already
