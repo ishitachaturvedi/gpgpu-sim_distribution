@@ -911,11 +911,9 @@ void shader_core_ctx::fetch() {
 	if (m_warp[warp_id]->hardware_done() &&
             m_scoreboard->pendingWrites(warp_id) &&
             !m_warp[warp_id]->done_exit()) {
-		//mem_str stall //GPU_stuff
-		if(tempw[warp_id]>mem_str){
-			tempw[warp_id]=mem_str;
-			mem_str_c=1;
-		}
+		//OC stall //GPU_stuff
+	        if(tempw[mf_next->get_inst().warp_id()]>ocpending)
+                        tempw[mf_next->get_inst().warp_id()]=ocpending;
 	}
         // this code checks if this warp has finished executing and can be
         // reclaimed
