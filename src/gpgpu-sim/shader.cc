@@ -2062,8 +2062,8 @@ void ldst_unit::L1_latency_queue_cycle() {
                                     [mf_next->get_inst().out[r]];
 	      if(still_pending)
 	      {
-		      if(tempw[warp_id]>ocpending)
-                        tempw[warp_id]=ocpending;
+		      if(tempw[mf_next->get_inst().warp_id()]>ocpending)
+                        tempw[mf_next->get_inst().warp_id()]=ocpending;
 	      }
               if (!still_pending) {
                 m_pending_writes[mf_next->get_inst().warp_id()].erase(
@@ -2080,8 +2080,8 @@ void ldst_unit::L1_latency_queue_cycle() {
         }
 	else{
         //Pending OC stall //GPU_stuff
-	if(tempw[warp_id]>ocpending)
-                        tempw[warp_id]=ocpending;
+	if(tempw[mf_next->get_inst().warp_id()]>ocpending)
+                        tempw[mf_next->get_inst().warp_id()]=ocpending;
 	}
 
 
@@ -2206,8 +2206,8 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
         for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++)
           if (inst.out[r] > 0){
             assert(m_pending_writes[inst.warp_id()][inst.out[r]] > 0);
-	    if(tempw[warp_id]>ocpending)
-                        tempw[warp_id]=ocpending;
+	    if(tempw[inst.warp_id()]>ocpending)
+                        tempw[inst.warp_id()]=ocpending;
 	  }
       } else if (inst.is_store())
         m_core->inc_store_req(inst.warp_id());
@@ -2583,8 +2583,8 @@ void ldst_unit::writeback() {
                 --m_pending_writes[m_next_wb.warp_id()][m_next_wb.out[r]];
             if(still_pending)
 	    {
-		    if(tempw[warp_id]>ocpending)
-                        tempw[warp_id]=ocpending;
+		    if(tempw[m_next_wb.warp_id()]>ocpending)
+                        tempw[m_next_wb.warp_id()]=ocpending;
 	    }
 	    if (!still_pending) {
               m_pending_writes[m_next_wb.warp_id()].erase(m_next_wb.out[r]);
