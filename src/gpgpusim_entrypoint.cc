@@ -69,6 +69,8 @@ int idle = 0;
 int ibufferw = 100;
 int imisspendingw = 100;
 int ocpending = 100;
+int globalw = 100;
+int localw = 100;
 //variables for bucketing
 int mem_str_c = 0;
 int mem_data_c = 0;
@@ -80,6 +82,8 @@ int idle_c = 0;
 int ibuffer_c = 0;
 int imisspending_c = 0;
 int ocpending_c = 0;
+int globalw_c = 0;
+int localw_c = 0;
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
 

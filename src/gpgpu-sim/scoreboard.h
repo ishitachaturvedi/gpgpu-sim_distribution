@@ -81,11 +81,12 @@ class Scoreboard {
   std::vector<std::set<unsigned> > reg_table_comp;
   // Register that depend on a long operation (global, local or tex memory)
   std::vector<std::set<unsigned> > longopregs;
-  // Register that depend on a long mem operation (global, local or tex memory)
-  std::vector<std::set<unsigned> > longopregs_mem;
-  // Register that depend on a long comp operation (global, local or tex memory)
-  std::vector<std::set<unsigned> > longopregs_comp;
-
+  // Register that depend on a long local mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_local;
+  // Register that depend on a long global mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_global;
+  // Register that depend on a long tex mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_tex;
 
   class gpgpu_t *m_gpu;
 };

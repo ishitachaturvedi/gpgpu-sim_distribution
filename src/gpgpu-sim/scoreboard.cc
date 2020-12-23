@@ -31,6 +31,7 @@
 #include "shader.h"
 #include "shader_trace.h"
 #include<iostream>
+#include "gsi_prof.h"
 // Constructor
 Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
     : longopregs() {
@@ -40,8 +41,9 @@ Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
   longopregs.resize(n_warps);
   reg_table_mem.resize(n_warps);
   reg_table_comp.resize(n_warps); 
-  longopregs_mem.resize(n_warps);
-  longopregs_comp.resize(n_warps); 
+  longopregs_local.resize(n_warps);
+  longopregs_global.resize(n_warps);
+  longopregs_tex.resize(n_warps); 
   m_gpu = gpu;
 }
 
@@ -139,18 +141,17 @@ void Scoreboard::reserveRegistersMem(const class warp_inst_t* inst) {
   }
 
   // Keep track of long operations
-  if (inst->is_load() && (inst->space.get_type() == global_space ||
-                          inst->space.get_type() == local_space ||
-                          inst->space.get_type() == param_space_kernel ||
-                          inst->space.get_type() == param_space_local ||
-                          inst->space.get_type() == param_space_unclassified ||
-                          inst->space.get_type() == tex_space)) {
-    for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
-      if (inst->out[r] > 0) {
-        SHADER_DPRINTF(SCOREBOARD, "New longopreg marked - warp:%d, reg: %d\n",
-                       inst->warp_id(), inst->out[r]);
-        longopregs_mem[inst->warp_id()].insert(inst->out[r]);
-      }
+  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
+	if (inst->out[r] > 0) {
+         if (inst->is_load())
+         {
+	  if(inst->space.get_type() == global_space)
+		  longopregs_global[inst->warp_id()].insert(inst->out[r]);
+	  if(inst->space.get_type() == local_space)
+		  longopregs_local[inst->warp_id()].insert(inst->out[r]);
+	  if(inst->space.get_type() == tex_space)
+		  longopregs_tex[inst->warp_id()].insert(inst->out[r]);
+        }
     }
   }
 }
@@ -164,21 +165,6 @@ void Scoreboard::reserveRegistersComp(const class warp_inst_t* inst) {
     }
   }
 
-  // Keep track of long operations
-  if (inst->is_load() && (inst->space.get_type() == global_space ||
-                          inst->space.get_type() == local_space ||
-                          inst->space.get_type() == param_space_kernel ||
-                          inst->space.get_type() == param_space_local ||
-                          inst->space.get_type() == param_space_unclassified ||
-                          inst->space.get_type() == tex_space)) {
-    for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
-      if (inst->out[r] > 0) {
-        SHADER_DPRINTF(SCOREBOARD, "New longopreg marked - warp:%d, reg: %d\n",
-                       inst->warp_id(), inst->out[r]);
-        longopregs_comp[inst->warp_id()].insert(inst->out[r]);
-      }
-    }
-  }
 }
 
 
@@ -199,7 +185,13 @@ void Scoreboard::releaseRegistersMem(const class warp_inst_t* inst) {
   for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
     if (inst->out[r] > 0) {
       releaseRegisterMem(inst->warp_id(), inst->out[r]);
-      longopregs_mem[inst->warp_id()].erase(inst->out[r]);
+      //longopregs_mem[inst->warp_id()].erase(inst->out[r]);
+      if(inst->space.get_type() == global_space)
+                  longopregs_global[inst->warp_id()].erase(inst->out[r]);
+          if(inst->space.get_type() == local_space)
+                  longopregs_local[inst->warp_id()].erase(inst->out[r]);
+          if(inst->space.get_type() == tex_space)
+                  longopregs_tex[inst->warp_id()].erase(inst->out[r]);
     }
   }
 }
@@ -209,7 +201,6 @@ void Scoreboard::releaseRegistersComp(const class warp_inst_t* inst) {
   for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
     if (inst->out[r] > 0) {
       releaseRegisterComp(inst->warp_id(), inst->out[r]);
-      longopregs_comp[inst->warp_id()].erase(inst->out[r]);
     }
   }
 }
@@ -264,6 +255,14 @@ bool Scoreboard::checkCollisionMem(unsigned wid, const class inst_t* inst) const
   std::set<int>::const_iterator it2;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
     if (reg_table_mem[wid].find(*it2) != reg_table_mem[wid].end()) {
+      if(longopregs_local[wid].find(*it2) != longopregs_local[wid].end())
+           {if(tempw[wid]>localw)
+		         tempw[wid]=localw;
+	   }
+      else if(longopregs_global[wid].find(*it2) != longopregs_global[wid].end())
+           {if(tempw[wid]>globalw)
+                         tempw[wid]=globalw;
+           }
       return true;
     }
   return false;

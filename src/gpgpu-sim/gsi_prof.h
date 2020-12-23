@@ -37,6 +37,8 @@ extern int idlew;
 extern int ibufferw;
 extern int imisspendingw;
 extern int ocpending;
+extern int globalw; //global mem load
+extern int localw; //local mem load
 //counters for checking if a stall type is hit for bucketing
 extern int mem_str_c;
 extern int mem_data_c;
@@ -49,3 +51,5 @@ extern int idlew_c;
 extern int ibuffer_c;
 extern int imisspending_c;
 extern int ocpending_c;
+extern int globalw_c;
+extern int localw_c;

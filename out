@@ -1,0 +1,525 @@
+
+	Building GPGPU-Sim version 4.0.0 (build gpgpu-sim_git-commit-84501c7d59338fa69d11554e0fe157e4a92e6753_modified_4.0) with CUDA version 9.1
+
+if [ ! -d lib/gcc-6.5.0/cuda-9010/release ]; then mkdir -p lib/gcc-6.5.0/cuda-9010/release; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libcuda ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libcuda; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/decuda_pred_table ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/decuda_pred_table; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libopencl ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libopencl; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libopencl/bin ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/libopencl/bin; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/intersim2 ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/intersim2; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuobjdump_to_ptxplus ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuobjdump_to_ptxplus; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpuwattch ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpuwattch; fi;
+if [ ! -d /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpuwattch/cacti ]; then mkdir -p /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpuwattch/cacti; fi;
+make -C ./src/cuda-sim/ depend
+make[1]: Entering directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/cuda-sim'
+touch /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/Makefile.makedepend
+makedepend -f/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/Makefile.makedepend -p/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ cuda-sim.cc cuda_device_printf.cc cuda_device_runtime.cc instructions.cc memory.cc ptx-stats.cc ptx_ir.cc ptx_loader.cc ptx_parser.cc ptx_sim.cc 2> /dev/null
+make[1]: 'depend' is up to date.
+make[1]: Leaving directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/cuda-sim'
+make -C ./src/cuda-sim/
+make[1]: Entering directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/cuda-sim'
+touch /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/Makefile.makedepend
+makedepend -f/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/Makefile.makedepend -p/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ cuda-sim.cc cuda_device_printf.cc cuda_device_runtime.cc instructions.cc memory.cc ptx-stats.cc ptx_ir.cc ptx_loader.cc ptx_parser.cc ptx_sim.cc 2> /dev/null
+g++  -c -O3 -g3 -Wall -Wno-unused-function -Wno-sign-compare -I/root/cuda/include  -I/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ -I. -I/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release -fPIC  -DTRACING_ON=1 -DCUDART_VERSION=9010 -std=c++0x cuda-sim.cc -o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda-sim.o
+In file included from cuda-sim.h:37:0,
+                 from cuda-sim.cc:30:
+../gpgpu-sim/shader.h: In constructor 'scheduler_unit::scheduler_unit(shader_core_stats*, shader_core_ctx*, Scoreboard*, simt_stack**, std::vector<shd_warp_t*>*, register_set*, register_set*, register_set*, register_set*, register_set*, std::vector<register_set*>&, register_set*, int)':
+../gpgpu-sim/shader.h:429:32: warning: 'scheduler_unit::m_spec_cores_out' will be initialized after [-Wreorder]
+   std::vector<register_set *> &m_spec_cores_out;
+                                ^~~~~~~~~~~~~~~~
+../gpgpu-sim/shader.h:428:17: warning:   'register_set* scheduler_unit::m_mem_out' [-Wreorder]
+   register_set *m_mem_out;
+                 ^~~~~~~~~
+../gpgpu-sim/shader.h:329:3: warning:   when initialized here [-Wreorder]
+   scheduler_unit(shader_core_stats *stats, shader_core_ctx *shader,
+   ^~~~~~~~~~~~~~
+cuda-sim.cc: In member function 'void function_info::ptx_jit_config(std::map<long long unsigned int, long unsigned int>, memory_space*, gpgpu_t*, dim3, dim3)':
+cuda-sim.cc:1466:3: warning: NULL used in arithmetic [-Wpointer-arith]
+   assert(system(buff) != NULL);
+   ^~~~~~
+cuda-sim.cc:1468:24: warning: ignoring return value of 'char* fgets(char*, int, FILE*)', declared with attribute warn_unused_result [-Wunused-result]
+   fgets(buff, 1024, fp);
+                        ^
+ar rcs /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/libgpgpu_ptx_sim.a /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx.tab.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptx_.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptxinfo.tab.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptxinfo_.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_parser.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_loader.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda_device_printf.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/instructions.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda-sim.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_ir.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_sim.o  /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/memory.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx-stats.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/decuda_pred_table/decuda_pred_table.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx.tab.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptx_.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptxinfo.tab.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptxinfo_.o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda_device_runtime.o
+make[1]: Leaving directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/cuda-sim'
+make -C ./src/gpgpu-sim/ depend
+make[1]: Entering directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/gpgpu-sim'
+touch /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/Makefile.makedepend
+makedepend -f/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/Makefile.makedepend -p/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/ addrdec.cc dram.cc dram_sched.cc gpu-cache.cc gpu-misc.cc gpu-sim.cc hashing.cc histogram.cc icnt_wrapper.cc l2cache.cc local_interconnect.cc mem_fetch.cc mem_latency_stat.cc power_interface.cc power_stat.cc scoreboard.cc shader.cc stack.cc stat-tool.cc traffic_breakdown.cc visualizer.cc 2> /dev/null
+make[1]: 'depend' is up to date.
+make[1]: Leaving directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/gpgpu-sim'
+make -C ./src/gpgpu-sim/
+make[1]: Entering directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/gpgpu-sim'
+touch /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/Makefile.makedepend
+makedepend -f/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/Makefile.makedepend -p/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/ addrdec.cc dram.cc dram_sched.cc gpu-cache.cc gpu-misc.cc gpu-sim.cc hashing.cc histogram.cc icnt_wrapper.cc l2cache.cc local_interconnect.cc mem_fetch.cc mem_latency_stat.cc power_interface.cc power_stat.cc scoreboard.cc shader.cc stack.cc stat-tool.cc traffic_breakdown.cc visualizer.cc 2> /dev/null
+g++  -O3 -g3 -fPIC -DCUDART_VERSION=9010 -Wall -DTRACING_ON=1 -std=c++0x -I/root/cuda/include -I/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/gpuwattch/ -DGPGPUSIM_POWER_MODEL -o /u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/scoreboard.o -c scoreboard.cc
+In file included from ../abstract_hardware_model.h:185:0,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+../stream_manager.h: In member function 'bool CUevent_st::done() const':
+../stream_manager.h:67:40: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+   bool done() const { return m_updates == m_issued; }
+                              ~~~~~~~~~~^~~~~~~~~~~
+In file included from scoreboard.cc:31:0:
+shader.h: In constructor 'scheduler_unit::scheduler_unit(shader_core_stats*, shader_core_ctx*, Scoreboard*, simt_stack**, std::vector<shd_warp_t*>*, register_set*, register_set*, register_set*, register_set*, register_set*, std::vector<register_set*>&, register_set*, int)':
+shader.h:429:32: warning: 'scheduler_unit::m_spec_cores_out' will be initialized after [-Wreorder]
+   std::vector<register_set *> &m_spec_cores_out;
+                                ^~~~~~~~~~~~~~~~
+shader.h:428:17: warning:   'register_set* scheduler_unit::m_mem_out' [-Wreorder]
+   register_set *m_mem_out;
+                 ^~~~~~~~~
+shader.h:329:3: warning:   when initialized here [-Wreorder]
+   scheduler_unit(shader_core_stats *stats, shader_core_ctx *shader,
+   ^~~~~~~~~~~~~~
+shader.h: In member function 'virtual bool specialized_unit::can_issue(const warp_inst_t&) const':
+shader.h:1234:17: warning: comparison between signed and unsigned integer expressions [-Wsign-compare]
+     if (inst.op != m_supported_op) {
+         ~~~~~~~~^~~~~~~~~~~~~~~~~
+scoreboard.cc: In constructor 'Scoreboard::Scoreboard(unsigned int, unsigned int, gpgpu_t*)':
+scoreboard.cc:44:3: error: 'longopregs_mem' was not declared in this scope
+   longopregs_mem.resize(n_warps);
+   ^~~~~~~~~~~~~~
+scoreboard.cc:45:3: error: 'longopregs_comp' was not declared in this scope
+   longopregs_comp.resize(n_warps);
+   ^~~~~~~~~~~~~~~
+scoreboard.cc: In member function 'void Scoreboard::reserveRegistersMem(const warp_inst_t*)':
+scoreboard.cc:146:57: error: 'r' was not declared in this scope
+     longopregs_global[inst->warp_id()].insert(inst->out[r]);
+                                                         ^
+scoreboard.cc:148:56: error: 'r' was not declared in this scope
+     longopregs_local[inst->warp_id()].insert(inst->out[r]);
+                                                        ^
+scoreboard.cc:150:54: error: 'r' was not declared in this scope
+     longopregs_tex[inst->warp_id()].insert(inst->out[r]);
+                                                      ^
+scoreboard.cc: In member function 'void Scoreboard::releaseRegistersMem(const warp_inst_t*)':
+scoreboard.cc:183:7: error: 'longopregs_mem' was not declared in this scope
+       longopregs_mem[inst->warp_id()].erase(inst->out[r]);
+       ^~~~~~~~~~~~~~
+scoreboard.cc: In member function 'void Scoreboard::releaseRegistersComp(const warp_inst_t*)':
+scoreboard.cc:193:7: error: 'longopregs_comp' was not declared in this scope
+       longopregs_comp[inst->warp_id()].erase(inst->out[r]);
+       ^~~~~~~~~~~~~~~
+scoreboard.cc: In member function 'bool Scoreboard::checkCollisionMem(unsigned int, const inst_t*) const':
+scoreboard.cc:248:44: error: no match for 'operator!=' (operand types are 'const int' and 'std::set<unsigned int>::iterator {aka std::_Rb_tree_const_iterator<unsigned int>}')
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                     ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/6/bits/locale_conv.h:41:0,
+                 from /usr/include/c++/6/locale:43,
+                 from /usr/include/c++/6/iomanip:43,
+                 from dram.h:38,
+                 from shader.h:50,
+                 from scoreboard.cc:31:
+/usr/include/c++/6/bits/unique_ptr.h:682:5: note: candidate: template<class _Tp, class _Dp> bool std::operator!=(std::nullptr_t, const std::unique_ptr<_Tp, _Dp>&)
+     operator!=(nullptr_t, const unique_ptr<_Tp, _Dp>& __x) noexcept
+     ^~~~~~~~
+/usr/include/c++/6/bits/unique_ptr.h:682:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   'std::set<unsigned int>::iterator {aka std::_Rb_tree_const_iterator<unsigned int>}' is not derived from 'const std::unique_ptr<_Tp, _Dp>'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/locale_conv.h:41:0,
+                 from /usr/include/c++/6/locale:43,
+                 from /usr/include/c++/6/iomanip:43,
+                 from dram.h:38,
+                 from shader.h:50,
+                 from scoreboard.cc:31:
+/usr/include/c++/6/bits/unique_ptr.h:677:5: note: candidate: template<class _Tp, class _Dp> bool std::operator!=(const std::unique_ptr<_Tp, _Dp>&, std::nullptr_t)
+     operator!=(const unique_ptr<_Tp, _Dp>& __x, nullptr_t) noexcept
+     ^~~~~~~~
+/usr/include/c++/6/bits/unique_ptr.h:677:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::unique_ptr<_Tp, _Dp>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/locale_conv.h:41:0,
+                 from /usr/include/c++/6/locale:43,
+                 from /usr/include/c++/6/iomanip:43,
+                 from dram.h:38,
+                 from shader.h:50,
+                 from scoreboard.cc:31:
+/usr/include/c++/6/bits/unique_ptr.h:671:5: note: candidate: template<class _Tp, class _Dp, class _Up, class _Ep> bool std::operator!=(const std::unique_ptr<_Tp, _Dp>&, const std::unique_ptr<_Up, _Ep>&)
+     operator!=(const unique_ptr<_Tp, _Dp>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/unique_ptr.h:671:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::unique_ptr<_Tp, _Dp>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/stack:61:0,
+                 from ../cuda-sim/ptx_sim.h:56,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/bits/stl_stack.h:299:5: note: candidate: template<class _Tp, class _Seq> bool std::operator!=(const std::stack<_Tp, _Seq>&, const std::stack<_Tp, _Seq>&)
+     operator!=(const stack<_Tp, _Seq>& __x, const stack<_Tp, _Seq>& __y)
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_stack.h:299:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::stack<_Tp, _Seq>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from ../cuda-sim/half.h:199:0,
+                 from ../cuda-sim/ptx_sim.h:34,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/functional:2217:5: note: candidate: template<class _Res, class ... _Args> bool std::operator!=(std::nullptr_t, const std::function<_Res(_ArgTypes ...)>&)
+     operator!=(nullptr_t, const function<_Res(_Args...)>& __f) noexcept
+     ^~~~~~~~
+/usr/include/c++/6/functional:2217:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   'std::set<unsigned int>::iterator {aka std::_Rb_tree_const_iterator<unsigned int>}' is not derived from 'const std::function<_Res(_ArgTypes ...)>'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from ../cuda-sim/half.h:199:0,
+                 from ../cuda-sim/ptx_sim.h:34,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/functional:2211:5: note: candidate: template<class _Res, class ... _Args> bool std::operator!=(const std::function<_Res(_ArgTypes ...)>&, std::nullptr_t)
+     operator!=(const function<_Res(_Args...)>& __f, nullptr_t) noexcept
+     ^~~~~~~~
+/usr/include/c++/6/functional:2211:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::function<_Res(_ArgTypes ...)>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/locale_facets.h:48:0,
+                 from /usr/include/c++/6/bits/basic_ios.h:37,
+                 from /usr/include/c++/6/ios:44,
+                 from /usr/include/c++/6/ostream:38,
+                 from /usr/include/c++/6/iostream:39,
+                 from ../cuda-sim/half.h:190,
+                 from ../cuda-sim/ptx_sim.h:34,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/bits/streambuf_iterator.h:210:5: note: candidate: template<class _CharT, class _Traits> bool std::operator!=(const std::istreambuf_iterator<_CharT, _Traits>&, const std::istreambuf_iterator<_CharT, _Traits>&)
+     operator!=(const istreambuf_iterator<_CharT, _Traits>& __a,
+     ^~~~~~~~
+/usr/include/c++/6/bits/streambuf_iterator.h:210:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::istreambuf_iterator<_CharT, _Traits>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/ios_base.h:46:0,
+                 from /usr/include/c++/6/ios:42,
+                 from /usr/include/c++/6/ostream:38,
+                 from /usr/include/c++/6/iostream:39,
+                 from ../cuda-sim/half.h:190,
+                 from ../cuda-sim/ptx_sim.h:34,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/system_error:323:3: note: candidate: bool std::operator!=(const std::error_condition&, const std::error_condition&)
+   operator!=(const error_condition& __lhs,
+   ^~~~~~~~
+/usr/include/c++/6/system_error:323:3: note:   no known conversion for argument 1 from 'const int' to 'const std::error_condition&'
+/usr/include/c++/6/system_error:319:3: note: candidate: bool std::operator!=(const std::error_condition&, const std::error_code&)
+   operator!=(const error_condition& __lhs, const error_code& __rhs) noexcept
+   ^~~~~~~~
+/usr/include/c++/6/system_error:319:3: note:   no known conversion for argument 1 from 'const int' to 'const std::error_condition&'
+/usr/include/c++/6/system_error:315:3: note: candidate: bool std::operator!=(const std::error_code&, const std::error_condition&)
+   operator!=(const error_code& __lhs, const error_condition& __rhs) noexcept
+   ^~~~~~~~
+/usr/include/c++/6/system_error:315:3: note:   no known conversion for argument 1 from 'const int' to 'const std::error_code&'
+/usr/include/c++/6/system_error:311:3: note: candidate: bool std::operator!=(const std::error_code&, const std::error_code&)
+   operator!=(const error_code& __lhs, const error_code& __rhs) noexcept
+   ^~~~~~~~
+/usr/include/c++/6/system_error:311:3: note:   no known conversion for argument 1 from 'const int' to 'const std::error_code&'
+In file included from /usr/include/c++/6/unordered_map:48:0,
+                 from ../cuda-sim/../tr1_hash_map.h:38,
+                 from ../cuda-sim/ptx_sim.h:33,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/bits/unordered_map.h:1786:5: note: candidate: template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc> bool std::operator!=(const std::unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&, const std::unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>&)
+     operator!=(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/unordered_map.h:1786:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/unordered_map:48:0,
+                 from ../cuda-sim/../tr1_hash_map.h:38,
+                 from ../cuda-sim/ptx_sim.h:33,
+                 from scoreboard.cc:30:
+/usr/include/c++/6/bits/unordered_map.h:1774:5: note: candidate: template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc> bool std::operator!=(const std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&, const std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>&)
+     operator!=(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/unordered_map.h:1774:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/map:62:0,
+                 from ../abstract_hardware_model.h:163,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_multimap.h:1000:5: note: candidate: template<class _Key, class _Tp, class _Compare, class _Alloc> bool std::operator!=(const std::multimap<_Key, _Tp, _Compare, _Alloc>&, const std::multimap<_Key, _Tp, _Compare, _Alloc>&)
+     operator!=(const multimap<_Key, _Tp, _Compare, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_multimap.h:1000:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::multimap<_Key, _Tp, _Compare, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/map:61:0,
+                 from ../abstract_hardware_model.h:163,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_map.h:1335:5: note: candidate: template<class _Key, class _Tp, class _Compare, class _Alloc> bool std::operator!=(const std::map<_Key, _Tp, _Compare, _Alloc>&, const std::map<_Key, _Tp, _Compare, _Alloc>&)
+     operator!=(const map<_Key, _Tp, _Compare, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_map.h:1335:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::map<_Key, _Tp, _Compare, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_map.h:63:0,
+                 from /usr/include/c++/6/map:61,
+                 from ../abstract_hardware_model.h:163,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/tuple:1367:5: note: candidate: template<class ... _TElements, class ... _UElements> constexpr bool std::operator!=(const std::tuple<_Args1 ...>&, const std::tuple<_Args2 ...>&)
+     operator!=(const tuple<_TElements...>& __t,
+     ^~~~~~~~
+/usr/include/c++/6/tuple:1367:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::tuple<_Args1 ...>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/tuple:39:0,
+                 from /usr/include/c++/6/bits/stl_map.h:63,
+                 from /usr/include/c++/6/map:61,
+                 from ../abstract_hardware_model.h:163,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/array:246:5: note: candidate: template<class _Tp, long unsigned int _Nm> bool std::operator!=(const std::array<_Tp, _Nm>&, const std::array<_Tp, _Nm>&)
+     operator!=(const array<_Tp, _Nm>& __one, const array<_Tp, _Nm>& __two)
+     ^~~~~~~~
+/usr/include/c++/6/array:246:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::array<_Tp, _Nm>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/list:63:0,
+                 from ../abstract_hardware_model.h:162,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_list.h:1894:5: note: candidate: template<class _Tp, class _Alloc> bool std::operator!=(const std::__cxx11::list<_Tp, _Alloc>&, const std::__cxx11::list<_Tp, _Alloc>&)
+     operator!=(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y)
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_list.h:1894:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::__cxx11::list<_Tp, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/list:63:0,
+                 from ../abstract_hardware_model.h:162,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_list.h:293:5: note: candidate: template<class _Val> bool std::operator!=(const std::_List_iterator<_Tp>&, const std::_List_const_iterator<_Tp>&)
+     operator!=(const _List_iterator<_Val>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_list.h:293:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::_List_iterator<_Tp>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/deque:64:0,
+                 from ../abstract_hardware_model.h:161,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_deque.h:2246:5: note: candidate: template<class _Tp, class _Alloc> bool std::operator!=(const std::deque<_Tp, _Alloc>&, const std::deque<_Tp, _Alloc>&)
+     operator!=(const deque<_Tp, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_deque.h:2246:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::deque<_Tp, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/deque:64:0,
+                 from ../abstract_hardware_model.h:161,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_deque.h:285:5: note: candidate: template<class _Tp, class _RefL, class _PtrL, class _RefR, class _PtrR> bool std::operator!=(const std::_Deque_iterator<_Tp, _Ref, _Ptr>&, const std::_Deque_iterator<_Tp, _RefR, _PtrR>&)
+     operator!=(const _Deque_iterator<_Tp, _RefL, _PtrL>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_deque.h:285:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::_Deque_iterator<_Tp, _Ref, _Ptr>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/deque:64:0,
+                 from ../abstract_hardware_model.h:161,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_deque.h:278:5: note: candidate: template<class _Tp, class _Ref, class _Ptr> bool std::operator!=(const std::_Deque_iterator<_Tp, _Ref, _Ptr>&, const std::_Deque_iterator<_Tp, _Ref, _Ptr>&)
+     operator!=(const _Deque_iterator<_Tp, _Ref, _Ptr>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_deque.h:278:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::_Deque_iterator<_Tp, _Ref, _Ptr>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/string:52:0,
+                 from /usr/include/c++/6/bitset:47,
+                 from ../abstract_hardware_model.h:160,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/basic_string.h:5149:5: note: candidate: template<class _CharT, class _Traits, class _Alloc> bool std::operator!=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&, const _CharT*)
+     operator!=(const basic_string<_CharT, _Traits, _Alloc>& __lhs,
+     ^~~~~~~~
+/usr/include/c++/6/bits/basic_string.h:5149:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/string:52:0,
+                 from /usr/include/c++/6/bitset:47,
+                 from ../abstract_hardware_model.h:160,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/basic_string.h:5137:5: note: candidate: template<class _CharT, class _Traits, class _Alloc> bool std::operator!=(const _CharT*, const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&)
+     operator!=(const _CharT* __lhs,
+     ^~~~~~~~
+/usr/include/c++/6/bits/basic_string.h:5137:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const _CharT*' and 'int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/string:52:0,
+                 from /usr/include/c++/6/bitset:47,
+                 from ../abstract_hardware_model.h:160,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/basic_string.h:5124:5: note: candidate: template<class _CharT, class _Traits, class _Alloc> bool std::operator!=(const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&, const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>&)
+     operator!=(const basic_string<_CharT, _Traits, _Alloc>& __lhs,
+     ^~~~~~~~
+/usr/include/c++/6/bits/basic_string.h:5124:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::__cxx11::basic_string<_CharT, _Traits, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/char_traits.h:40:0,
+                 from /usr/include/c++/6/string:40,
+                 from /usr/include/c++/6/bitset:47,
+                 from ../abstract_hardware_model.h:160,
+                 from scoreboard.h:38,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/postypes.h:221:5: note: candidate: template<class _StateT> bool std::operator!=(const std::fpos<_StateT>&, const std::fpos<_StateT>&)
+     operator!=(const fpos<_StateT>& __lhs, const fpos<_StateT>& __rhs)
+     ^~~~~~~~
+/usr/include/c++/6/bits/postypes.h:221:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::fpos<_StateT>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/vector:64:0,
+                 from scoreboard.h:32,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_vector.h:1538:5: note: candidate: template<class _Tp, class _Alloc> bool std::operator!=(const std::vector<_Tp, _Alloc>&, const std::vector<_Tp, _Alloc>&)
+     operator!=(const vector<_Tp, _Alloc>& __x, const vector<_Tp, _Alloc>& __y)
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_vector.h:1538:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::vector<_Tp, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/set:62:0,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_multiset.h:847:5: note: candidate: template<class _Key, class _Compare, class _Alloc> bool std::operator!=(const std::multiset<_Key, _Compare, _Alloc>&, const std::multiset<_Key, _Compare, _Alloc>&)
+     operator!=(const multiset<_Key, _Compare, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_multiset.h:847:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::multiset<_Key, _Compare, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/set:61:0,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_set.h:864:5: note: candidate: template<class _Key, class _Compare, class _Alloc> bool std::operator!=(const std::set<_Key, _Compare, _Alloc>&, const std::set<_Key, _Compare, _Alloc>&)
+     operator!=(const set<_Key, _Compare, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_set.h:864:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::set<_Key, _Compare, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/set:60:0,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_tree.h:1302:5: note: candidate: template<class _Key, class _Val, class _KeyOfValue, class _Compare, class _Alloc> bool std::operator!=(const std::_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>&, const std::_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>&)
+     operator!=(const _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_tree.h:1302:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/set:60:0,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_tree.h:334:5: note: candidate: template<class _Val> bool std::operator!=(const std::_Rb_tree_iterator<_Tp>&, const std::_Rb_tree_const_iterator<_Val>&)
+     operator!=(const _Rb_tree_iterator<_Val>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_tree.h:334:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::_Rb_tree_iterator<_Tp>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_tree.h:64:0,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/allocator.h:164:5: note: candidate: template<class _Tp> bool std::operator!=(const std::allocator<_Tp1>&, const std::allocator<_Tp1>&)
+     operator!=(const allocator<_Tp>&, const allocator<_Tp>&)
+     ^~~~~~~~
+/usr/include/c++/6/bits/allocator.h:164:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::allocator<_Tp1>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_tree.h:64:0,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/allocator.h:158:5: note: candidate: template<class _T1, class _T2> bool std::operator!=(const std::allocator<_Tp1>&, const std::allocator<_T2>&)
+     operator!=(const allocator<_T1>&, const allocator<_T2>&)
+     ^~~~~~~~
+/usr/include/c++/6/bits/allocator.h:158:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::allocator<_Tp1>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_algobase.h:67:0,
+                 from /usr/include/c++/6/bits/stl_tree.h:63,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_iterator.h:1134:5: note: candidate: template<class _Iterator> bool std::operator!=(const std::move_iterator<_IteratorL>&, const std::move_iterator<_IteratorL>&)
+     operator!=(const move_iterator<_Iterator>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_iterator.h:1134:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::move_iterator<_IteratorL>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_algobase.h:67:0,
+                 from /usr/include/c++/6/bits/stl_tree.h:63,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_iterator.h:1128:5: note: candidate: template<class _IteratorL, class _IteratorR> bool std::operator!=(const std::move_iterator<_IteratorL>&, const std::move_iterator<_IteratorR>&)
+     operator!=(const move_iterator<_IteratorL>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_iterator.h:1128:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::move_iterator<_IteratorL>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_algobase.h:67:0,
+                 from /usr/include/c++/6/bits/stl_tree.h:63,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_iterator.h:364:5: note: candidate: template<class _IteratorL, class _IteratorR> bool std::operator!=(const std::reverse_iterator<_Iterator>&, const std::reverse_iterator<_IteratorR>&)
+     operator!=(const reverse_iterator<_IteratorL>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_iterator.h:364:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::reverse_iterator<_Iterator>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_algobase.h:67:0,
+                 from /usr/include/c++/6/bits/stl_tree.h:63,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_iterator.h:307:5: note: candidate: template<class _Iterator> bool std::operator!=(const std::reverse_iterator<_Iterator>&, const std::reverse_iterator<_Iterator>&)
+     operator!=(const reverse_iterator<_Iterator>& __x,
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_iterator.h:307:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::reverse_iterator<_Iterator>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+In file included from /usr/include/c++/6/bits/stl_algobase.h:64:0,
+                 from /usr/include/c++/6/bits/stl_tree.h:63,
+                 from /usr/include/c++/6/set:60,
+                 from scoreboard.h:31,
+                 from scoreboard.cc:29:
+/usr/include/c++/6/bits/stl_pair.h:453:5: note: candidate: template<class _T1, class _T2> constexpr bool std::operator!=(const std::pair<_T1, _T2>&, const std::pair<_T1, _T2>&)
+     operator!=(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y)
+     ^~~~~~~~
+/usr/include/c++/6/bits/stl_pair.h:453:5: note:   template argument deduction/substitution failed:
+scoreboard.cc:248:73: note:   mismatched types 'const std::pair<_T1, _T2>' and 'const int'
+       if(longopregs_local[wid].find((*it2) != longopregs_local[wid].end()))
+                                                                         ^
+Makefile:93: recipe for target '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/scoreboard.o' failed
+make[1]: *** [/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/scoreboard.o] Error 1
+make[1]: Leaving directory '/u/ishitac/gpgpusim-codes/gsi/gpgpu-sim_distribution/src/gpgpu-sim'
+Makefile:217: recipe for target 'gpgpu-sim_uarch' failed
+make: *** [gpgpu-sim_uarch] Error 2
