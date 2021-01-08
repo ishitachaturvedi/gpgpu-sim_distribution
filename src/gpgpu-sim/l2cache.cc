@@ -343,13 +343,15 @@ void memory_partition_unit::dram_cycle() {
       mem_fetch *mf = m_sub_partition[spid]->L2_dram_queue_top();
       //std::cout<<"6cycle number "<<cycle_num<<std::endl;
       
-      if (m_dram->full(mf->is_write())) {break;
+      if (m_dram->full(mf->is_write())) {
       //DRAM store buffer full //GPU_stuff
-
+#ifdef GSI
                         if(tempw[mf->get_wid()]>mem_str){
                                 tempw[mf->get_wid()]=mem_str;
 				mem_str_c=1;
 			}
+#endif
+	break;
       }
 
       m_sub_partition[spid]->L2_dram_queue_pop();
@@ -546,12 +548,13 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
                             mf->get_addr(), status);
         if(status==RESERVATION_FAIL)
                 {
-
+#ifdef GSI
                         //MSHR FULL mem str talency //GPU_stuff
                         if(tempw[mf->get_wid()]>mem_str){
                                 tempw[mf->get_wid()]=mem_str;
 				mem_str_c=1;
 			}
+#endif
                 }
         if (status == HIT) {
           if (!write_sent) {

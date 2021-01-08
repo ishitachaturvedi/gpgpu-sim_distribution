@@ -256,13 +256,19 @@ bool Scoreboard::checkCollisionMem(unsigned wid, const class inst_t* inst) const
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
     if (reg_table_mem[wid].find(*it2) != reg_table_mem[wid].end()) {
       if(longopregs_local[wid].find(*it2) != longopregs_local[wid].end())
-           {if(tempw[wid]>localw)
+           {
+#ifdef GSI
+		   if(tempw[wid]>localw)
 		         tempw[wid]=localw;
+#endif
 	   }
-      else if(longopregs_global[wid].find(*it2) != longopregs_global[wid].end())
-           {if(tempw[wid]>globalw)
+      else if(longopregs_global[wid].find(*it2) != longopregs_global[wid].end())    
+           {
+#ifdef GSI
+		   if(tempw[wid]>globalw)
                          tempw[wid]=globalw;
-           }
+#endif
+	   }
       return true;
     }
   return false;

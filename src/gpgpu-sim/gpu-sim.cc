@@ -80,11 +80,12 @@ class gpgpu_sim_wrapper {};
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 int stall_var;
-int stallDataT[32];
+int stallDataT[1000];
 int countwc=0;
 int final_stall;
 bool g_interactive_debugger_enabled = false;
-
+int act_w;
+#ifdef GSI
 float mem_str_cw = 0;
 float mem_data_cw = 0;
 float synco_cw = 0;
@@ -92,7 +93,8 @@ float comp_str_cw = 0;
 float comp_data_cw = 0;
 float control_cw = 0;
 float idle_cw = 0;
-int warp_active=1; //set number of active warps
+int warp_active=32; //set number of active warps
+#endif
 tr1_hash_map<new_addr_type, unsigned> address_random_interleaving;
 
 /* Clock Domains */
@@ -1646,6 +1648,7 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
   symbol_table *symtab = kernel_func_info->get_symtab();
   unsigned ctaid = kernel.get_next_cta_id_single();
   checkpoint *g_checkpoint = new checkpoint();
+  act_w=0;
   for (unsigned i = start_thread; i < end_thread; i++) {
     m_threadState[i].m_cta_id = free_cta_hw_id;
     unsigned warp_id = i / m_config->warp_size;
@@ -1668,6 +1671,7 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
     }
     //
     warps.set(warp_id);
+    act_w=warp_id;
   }
   assert(nthreads_in_block > 0 &&
          nthreads_in_block <=
@@ -1825,6 +1829,7 @@ void gpgpu_sim::cycle() {
           m_power_stats->pwr_mem_stat->l2_cache_stats[CURRENT_STAT_IDX]);
     }
   }
+
   partiton_reqs_in_parallel += partiton_reqs_in_parallel_per_cycle;
   if (partiton_reqs_in_parallel_per_cycle > 0) {
     partiton_reqs_in_parallel_util += partiton_reqs_in_parallel_per_cycle;
@@ -1867,10 +1872,13 @@ void gpgpu_sim::cycle() {
       raise(SIGTRAP);  // Debug breakpoint
     }
 
-    //p
+#ifdef GSI
     //GPU_stuff //Cycle ends here
          //Add all data correctly in final stall array
 	 //in a warp assign relative importance to stalls
+	 warp_active=act_w+1;
+	 if(warp_active>max_active)
+		 max_active=warp_active;
          for(int iw=0;iw<warp_active;iw++)
          {
           stall_var=10; //warp alright
@@ -1883,12 +1891,12 @@ void gpgpu_sim::cycle() {
 	  if(stall_var>tempw[iw])
               stall_var=tempw[iw];
           //stallData[cycle_num][iw]=stall_var;
-          //printf(" %d ",stall_var);
+          printf(" %d ",stall_var);
 	  stallData[iw]=stall_var;
          }
+	 printf("\n");
          final_stall=10;
 	 //renumber stall by cycle importance
-	 //printf("\n");
 	 //Between warps assign relative importance to stalls
 	 //Stall Values come from src/gpgpusim_entrypoint.cc. Change stall values to vary relative ordering
          for(int iw=0;iw<warp_active;iw++)
@@ -1919,8 +1927,8 @@ void gpgpu_sim::cycle() {
 	 }
          //printf("\n");
 	 //print stall data
-	 //print for GSI
-	printf("\ncycle %d : stall %d",cycle_num,final_stall);
+	 //print for GSI	
+	 //printf("cycle %d : stall %d\n",cycle_num,final_stall);
 	//
 	//bucketing prints
 	
@@ -1943,12 +1951,10 @@ void gpgpu_sim::cycle() {
 	 control_cw=float(control_c)/countwc;
 	 idle_cw=float(idlew)/countwc;
 
-//Bucketed stall output
-	 //printf("\ncycle %d : mem_str %f mem_data %f synco %f comp_str %f comp_data %f control %f idle %f done",cycle_num,mem_str_cw,mem_data_cw,synco_cw,comp_str_cw,comp_data_cw,control_cw,idle_cw);
-
+#endif
 	 //New cycle starts
     gpu_sim_cycle++;
-
+#ifdef GSI
     countwc=0;
     mem_str_c=0;
     mem_data_c=0;
@@ -1964,9 +1970,8 @@ void gpgpu_sim::cycle() {
          }
          idlew=0;
          cycle_num=gpu_sim_cycle;
-
+#endif
     if (g_interactive_debugger_enabled) gpgpu_debug();
-
       // McPAT main cycle (interface with McPAT)
 #ifdef GPGPUSIM_POWER_MODEL
     if (m_config.g_power_simulation_enabled) {
@@ -1979,7 +1984,6 @@ void gpgpu_sim::cycle() {
 
     issue_block2core();
     decrement_kernel_latency();
-
     // Depending on configuration, invalidate the caches once all of threads are
     // completed.
     int all_threads_complete = 1;
@@ -2001,7 +2005,6 @@ void gpgpu_sim::cycle() {
           }
         }
       }
-
       if (all_threads_complete && !m_memory_config->m_L2_config.disabled()) {
         printf("Flushed L2 caches...\n");
         if (m_memory_config->m_L2_config.get_num_lines()) {
@@ -2063,7 +2066,6 @@ void gpgpu_sim::cycle() {
           shader_print_scheduler_stat(stdout, false);
       }
     }
-
     if (!(gpu_sim_cycle % 50000)) {
       // deadlock detection
       if (m_config.gpu_deadlock_detect && gpu_sim_insn == last_gpu_sim_insn) {

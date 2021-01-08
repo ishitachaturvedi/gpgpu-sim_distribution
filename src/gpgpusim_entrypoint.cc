@@ -43,6 +43,7 @@
 #include<vector>
 using std::vector;
 
+#ifdef GSI
 //give initial size for number of cycles to be considered
 int initSize=50000;
 int cycle_num=0;
@@ -66,9 +67,10 @@ int comp_str = 6;
 int comp_data = 5;
 int control = 1;
 int idle = 0;
-int ibufferw = 100;
-int imisspendingw = 100;
-int ocpending = 100;
+int ibufferw = 1;
+int imisspendingw = 1;
+int ocpending = 0;
+int nodispatch=0;
 int globalw = 100;
 int localw = 100;
 //variables for bucketing
@@ -84,6 +86,10 @@ int imisspending_c = 0;
 int ocpending_c = 0;
 int globalw_c = 0;
 int localw_c = 0;
+#endif
+//max number of warps active
+int max_active=0;
+
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
 
@@ -113,6 +119,7 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 
 static void termination_callback() {
   printf("The STALLS are\n0-no stall\n1-mem_str\n2-mem_data\n3-synchronization\n4-comp_str\n5-comp_data\n6-control stall\n7-idle stall\n");
+  printf("max warps %d\n",max_active);
   printf("GPGPU-Sim: *** exit detected ***\n");
   fflush(stdout);
 }
@@ -121,10 +128,12 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   atexit(termination_callback);
   //appropriately sizing arrays for use
+#ifdef GSI
   initSize=50000;
-  stallData.resize(32,10);
-  tempw.resize(32,10);
-  activew.resize(32,0);
+  stallData.resize(1000,10);
+  tempw.resize(1000,10);
+  activew.resize(1000,0);
+#endif
   // concurrent kernel execution simulation thread
   do {
     if (g_debug_execution >= 3) {

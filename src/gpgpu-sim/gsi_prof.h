@@ -4,6 +4,9 @@
 #include<vector>
 using std::vector;
 
+#define GSI
+#define fast
+
 //vectors to store the stall type for each warp
 //0-memory structure stall
 //1-memory data stall
@@ -23,6 +26,7 @@ extern vector<int> tempw;
 extern vector<int> activew;
 extern int active_warp;
 extern int cycle_num;
+extern int max_active;
 //give priority to different stalls
 //0-max priority
 //10-least priority
@@ -37,6 +41,7 @@ extern int idlew;
 extern int ibufferw;
 extern int imisspendingw;
 extern int ocpending;
+extern int nodispatch;
 extern int globalw; //global mem load
 extern int localw; //local mem load
 //counters for checking if a stall type is hit for bucketing
