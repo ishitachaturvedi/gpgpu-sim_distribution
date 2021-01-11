@@ -1887,10 +1887,10 @@ void gpgpu_sim::cycle() {
 	  if(stall_var>tempw[iw])
               stall_var=tempw[iw];
           //stallData[cycle_num][iw]=stall_var;
-          printf(" %d ",stall_var);
+          //printf(" %d ",stall_var);
 	  stallData[iw]=stall_var;
          }
-	 printf("\n");
+	 //printf("\n");
          final_stall=10;
 	 //renumber stall by cycle importance
 	 //Between warps assign relative importance to stalls
@@ -1924,7 +1924,7 @@ void gpgpu_sim::cycle() {
          //printf("\n");
 	 //print stall data
 	 //print for GSI	
-	 //printf("cycle %d : stall %d\n",cycle_num,final_stall);
+	 printf("cycle %d : stall %d\n",cycle_num,final_stall);
 	//
 	//bucketing prints
 	
