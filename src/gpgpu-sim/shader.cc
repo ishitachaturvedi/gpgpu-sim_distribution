@@ -993,8 +993,8 @@ void shader_core_ctx::fetch() {
             assert(status == RESERVATION_FAIL);
 #ifdef GSI
 	    //mem str //GPU_stuff
-            if(tempw[active_warp]>mem_str){
-                          tempw[active_warp]=mem_str;
+            if(tempw[warp_id]>mem_str){
+                          tempw[warp_id]=mem_str;
 			  mem_str_c=1;
 	    }
 #endif
@@ -1901,8 +1901,8 @@ bool ldst_unit::shared_cycle(warp_inst_t &inst, mem_stage_stall_type &rc_fail,
     rc_fail = BK_CONF;
 #ifdef GSI
     //mem str stall //GPU_stuff
-       if(tempw[active_warp]>mem_str){
-               tempw[active_warp]=mem_str;
+       if(tempw[inst.warp_id()]>mem_str){
+               tempw[inst.warp_id()]=mem_str;
 	       mem_str_c=1;
        }
 #endif
@@ -1933,15 +1933,15 @@ mem_stage_stall_type ldst_unit::process_cache_access(
       for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++)
         if (inst.out[r] > 0) {m_pending_writes[inst.warp_id()][inst.out[r]]--;
 	}
-        
+
     }
     if (!write_sent) delete mf;
   } else if (status == RESERVATION_FAIL) {
     result = BK_CONF;
 #ifdef GSI
     //mem_str stall //GPU_stuff
-       if(tempw[active_warp]>mem_str){
-               tempw[active_warp]=mem_str;
+       if(tempw[inst.warp_id()]>mem_str){
+               tempw[inst.warp_id()]=mem_str;
 	       mem_str_c=1;
        }
 #endif
@@ -1954,8 +1954,8 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     // when mf returns
 #ifdef GSI
     //mem_data stall  //GPU_stuff
-        if(tempw[active_warp]<mem_data){
-                tempw[active_warp]=mem_data;
+        if(tempw[inst.warp_id()]<mem_data){
+                tempw[inst.warp_id()]=mem_data;
 		mem_data_c=1;
 	}
 #endif
@@ -1964,8 +1964,8 @@ mem_stage_stall_type ldst_unit::process_cache_access(
   if (!inst.accessq_empty() && result == NO_RC_FAIL) {result = COAL_STALL;
 #ifdef GSI
 	  //mem_data stall  //GPU_stuff
-        if(tempw[active_warp]<mem_data){
-                tempw[active_warp]=mem_data;
+        if(tempw[inst.warp_id()]<mem_data){
+                tempw[inst.warp_id()]=mem_data;
 		mem_data_c=1;
 	}
 #endif
@@ -2028,8 +2028,8 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
         result = BK_CONF;
 #ifdef GSI
 	 //Mem_str stall //GPU_stuff
-                if(tempw[active_warp]>mem_str){
-                     tempw[active_warp]=mem_str;
+                if(tempw[inst.warp_id()]>mem_str){
+                     tempw[inst.warp_id()]=mem_str;
 		     mem_str_c=1;
 		}
 #endif
@@ -2041,8 +2041,8 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
     if (!inst.accessq_empty() && result != BK_CONF) {result = COAL_STALL;
 #ifdef GSI
     //GPU stuff
-                if(tempw[active_warp]>mem_data){
-                        tempw[active_warp]=mem_data;
+                if(tempw[inst.warp_id()]>mem_data){
+                        tempw[inst.warp_id()]=mem_data;
 			mem_data_c=1;
 		}
 #endif
@@ -2133,8 +2133,8 @@ void ldst_unit::L1_latency_queue_cycle() {
         assert(!write_sent);
 #ifdef GSI
 	//GPU_stuff
-	 if (tempw[active_warp]<mem_str){
-                                   tempw[active_warp]=mem_str;
+	 if (tempw[mf_next->get_inst().warp_id()]<mem_str){
+                                   tempw[mf_next->get_inst().warp_id()]=mem_str;
 				   mem_str_c=1;
 	 }
 #endif
@@ -2251,8 +2251,8 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
   {stall_cond = COAL_STALL;
 #ifdef GSI
 	  //GPU_stuff
-	  if(tempw[active_warp]>mem_data){
-                   tempw[active_warp]=mem_data;}
+	  if(tempw[inst.warp_id()]>mem_data){
+                   tempw[inst.warp_id()]=mem_data;}
   	  mem_data_c=1;
 #endif
   }
@@ -3969,8 +3969,8 @@ bool shd_warp_t::waiting() {
     // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
 #ifdef GSI
-        if(tempw[active_warp]>synco){
-                tempw[active_warp]=synco;
+        if(tempw[m_warp_id]>synco){
+                tempw[m_warp_id]=synco;
 		synco_c=1;
 	}
 #endif
@@ -3980,8 +3980,8 @@ bool shd_warp_t::waiting() {
     // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
 #ifdef GSI
-        if(tempw[active_warp]>synco){
-                tempw[active_warp]=synco;
+        if(tempw[m_warp_id]>synco){
+                tempw[m_warp_id]=synco;
 		synco_c=1;
 	}
 #endif
@@ -3990,8 +3990,8 @@ bool shd_warp_t::waiting() {
 	  // waiting for other warps in CTA to reach barrier
         // snc stall //GPU stuff
 #ifdef GSI
-        if(tempw[active_warp]>synco){
-                tempw[active_warp]=synco;
+        if(tempw[m_warp_id]>synco){
+                tempw[m_warp_id]=synco;
 		synco_c=1;
 	}
 #endif

@@ -345,12 +345,14 @@ void memory_partition_unit::dram_cycle() {
       
       if (m_dram->full(mf->is_write())) {
       //DRAM store buffer full //GPU_stuff
-#ifdef GSI
-                        if(tempw[mf->get_wid()]>mem_str){
-                                tempw[mf->get_wid()]=mem_str;
-				mem_str_c=1;
-			}
-#endif
+//#ifdef GSI                  
+	        //printf("I am here\n");
+		//fflush(stdout);
+                  //      if(tempw[mf->get_wid()]>mem_str){
+                    //            tempw[mf->get_wid()]=mem_str;
+		//		mem_str_c=1;
+		//	}
+//#endif
 	break;
       }
 

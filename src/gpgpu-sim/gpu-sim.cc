@@ -1785,7 +1785,6 @@ void gpgpu_sim::cycle() {
     }
   }
   partiton_replys_in_parallel += partiton_replys_in_parallel_per_cycle;
-
   if (clock_mask & DRAM) {
     for (unsigned i = 0; i < m_memory_config->m_n_mem; i++) {
 	    
@@ -1807,7 +1806,6 @@ void gpgpu_sim::cycle() {
           m_power_stats->pwr_mem_stat->n_req[CURRENT_STAT_IDX][i]);
     }
   }
-
   // L2 operations follow L2 clock domain
   unsigned partiton_reqs_in_parallel_per_cycle = 0;
   if (clock_mask & L2) {
@@ -1835,11 +1833,9 @@ void gpgpu_sim::cycle() {
     partiton_reqs_in_parallel_util += partiton_reqs_in_parallel_per_cycle;
     gpu_sim_cycle_parition_util++;
   }
-
   if (clock_mask & ICNT) {
     icnt_transfer();
   }
-
   if (clock_mask & CORE) {
     // L1 cache + shader core pipeline stages
     m_power_stats->pwr_mem_stat->core_cache_stats[CURRENT_STAT_IDX].clear();
@@ -1866,11 +1862,11 @@ void gpgpu_sim::cycle() {
     *average_pipeline_duty_cycle = ((*average_pipeline_duty_cycle) + temp);
     // cout<<"Average pipeline duty cycle:
     // "<<*average_pipeline_duty_cycle<<endl;
-
     if (g_single_step &&
         ((gpu_sim_cycle + gpu_tot_sim_cycle) >= g_single_step)) {
       raise(SIGTRAP);  // Debug breakpoint
     }
+
 
 #ifdef GSI
     //GPU_stuff //Cycle ends here
@@ -1918,13 +1914,13 @@ void gpgpu_sim::cycle() {
 	  if(stallData[iw]==10)
                   stallDataT[iw]=0;
 	 }
-         
 	 final_stall=10;
 	 for(int iw=0;iw<warp_active;iw++)
 	 {
 	    if(final_stall>stallDataT[iw])
 		    final_stall=stallDataT[iw];
 	 }
+
          //printf("\n");
 	 //print stall data
 	 //print for GSI	

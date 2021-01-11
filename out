@@ -1,71 +1,57 @@
 Binary file lib/gcc-6.5.0/cuda-9010/release/libcudart.so matches
 Binary file lib/gcc-6.5.0/cuda-9010/debug/libcudart.so matches
-src/gpgpu-sim/gpu-sim.h:  bool gpu_deadlock_detect;
-src/gpgpu-sim/gpu-sim.cc:      opp, "-gpgpu_deadlock_detect", OPT_BOOL, &gpu_deadlock_detect,
-src/gpgpu-sim/gpu-sim.cc:  if (m_config.gpu_deadlock_detect && gpu_deadlock) return false;
-src/gpgpu-sim/gpu-sim.cc:  if (m_config.gpu_deadlock_detect && gpu_deadlock) {
-src/gpgpu-sim/gpu-sim.cc:      if (m_config.gpu_deadlock_detect && gpu_sim_insn == last_gpu_sim_insn) {
-Binary file build/gcc-6.5.0/cuda-9010/release/libcuda/libcuda.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/libcuda/cuda_runtime_api.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/debug.o matches
+src/gpgpusim_entrypoint.cc:int active_warp;
+src/gpgpu-sim/gsi_prof.h:extern int active_warp;
+src/gpgpu-sim/gpu-sim.cc:      "two_level_active:<num_active_warps>:<inner_prioritization>:<outer_"
+src/gpgpu-sim/shader.cc:      m_active_warps(0),
+src/gpgpu-sim/shader.cc:    m_active_warps = 0;
+src/gpgpu-sim/shader.cc:      ++m_active_warps;
+src/gpgpu-sim/shader.cc: if(m_active_warps==0)
+src/gpgpu-sim/shader.cc:  if (m_active_warps > 0) {
+src/gpgpu-sim/shader.cc:    active += m_active_warps;
+src/gpgpu-sim/shader.cc:          --m_active_warps;
+src/gpgpu-sim/shader.cc:          assert(m_active_warps >= 0);
+src/gpgpu-sim/shader.cc:        //if(m_active_warps==0)
+src/gpgpu-sim/shader.cc:            if(tempw[active_warp]>mem_str){
+src/gpgpu-sim/shader.cc:                          tempw[active_warp]=mem_str;
+src/gpgpu-sim/shader.cc:    while (m_next_cycle_prioritized_warps.size() < m_max_active_warps) {
+src/gpgpu-sim/shader.cc:       if(tempw[active_warp]>mem_str){
+src/gpgpu-sim/shader.cc:               tempw[active_warp]=mem_str;
+src/gpgpu-sim/shader.cc:       if(tempw[active_warp]>mem_str){
+src/gpgpu-sim/shader.cc:               tempw[active_warp]=mem_str;
+src/gpgpu-sim/shader.cc:        if(tempw[active_warp]<mem_data){
+src/gpgpu-sim/shader.cc:                tempw[active_warp]=mem_data;
+src/gpgpu-sim/shader.cc:        if(tempw[active_warp]<mem_data){
+src/gpgpu-sim/shader.cc:                tempw[active_warp]=mem_data;
+src/gpgpu-sim/shader.cc:                if(tempw[active_warp]>mem_str){
+src/gpgpu-sim/shader.cc:                     tempw[active_warp]=mem_str;
+src/gpgpu-sim/shader.cc:                if(tempw[active_warp]>mem_data){
+src/gpgpu-sim/shader.cc:                        tempw[active_warp]=mem_data;
+src/gpgpu-sim/shader.cc:	 if (tempw[active_warp]<mem_str){
+src/gpgpu-sim/shader.cc:                                   tempw[active_warp]=mem_str;
+src/gpgpu-sim/shader.cc:	  if(tempw[active_warp]>mem_data){
+src/gpgpu-sim/shader.cc:                   tempw[active_warp]=mem_data;}
+src/gpgpu-sim/shader.cc:        if(tempw[active_warp]>synco){
+src/gpgpu-sim/shader.cc:                tempw[active_warp]=synco;
+src/gpgpu-sim/shader.cc:        if(tempw[active_warp]>synco){
+src/gpgpu-sim/shader.cc:                tempw[active_warp]=synco;
+src/gpgpu-sim/shader.cc:        if(tempw[active_warp]>synco){
+src/gpgpu-sim/shader.cc:                tempw[active_warp]=synco;
+src/gpgpu-sim/shader.h:        sscanf(config_str, "two_level_active:%d:%d:%d", &m_max_active_warps,
+src/gpgpu-sim/shader.h:    if (m_next_cycle_prioritized_warps.size() < m_max_active_warps) {
+src/gpgpu-sim/shader.h:  unsigned m_max_active_warps;
+src/gpgpu-sim/shader.h:  int m_active_warps;
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpusim_entrypoint.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/power_interface.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/dram_sched.o matches
+Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/scoreboard.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/gpu-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/stat-tool.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/mem_latency_stat.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/l2cache.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/libgpu_uarch_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/gpu-cache.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/power_stat.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/dram.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/visualizer.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/shader.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/libgpgpusim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/stream_manager.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/memory.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/instructions.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptx_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda_device_runtime.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_parser.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_ir.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx.tab.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_loader.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptxinfo_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/libgpgpu_ptx_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx-stats.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/abstract_hardware_model.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/libcuda/libcuda.a matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/libcuda/cuda_runtime_api.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/debug.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpusim_entrypoint.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/power_interface.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/dram_sched.o matches
+Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/scoreboard.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/gpu-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/stat-tool.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/mem_latency_stat.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/l2cache.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/libgpu_uarch_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/gpu-cache.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/power_stat.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/dram.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/visualizer.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/gpgpu-sim/shader.o matches
 Binary file build/gcc-6.5.0/cuda-9010/debug/libgpgpusim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/stream_manager.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/memory.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/instructions.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/lex.ptx_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/cuda_device_runtime.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx_parser.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx_ir.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx.tab.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx_sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx_loader.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/lex.ptxinfo_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/libgpgpu_ptx_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/cuda-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/cuda-sim/ptx-stats.o matches
-Binary file build/gcc-6.5.0/cuda-9010/debug/abstract_hardware_model.o matches
