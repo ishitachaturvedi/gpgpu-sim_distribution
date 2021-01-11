@@ -28,7 +28,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "gpu-sim.h"
-
+#include <iostream>
 #include <math.h>
 #include <signal.h>
 #include <stdio.h>
@@ -50,7 +50,7 @@
 #include "l2cache.h"
 #include "shader.h"
 #include "stat-tool.h"
-
+#include "fast.h"
 #include "../../libcuda/gpgpu_context.h"
 #include "../abstract_hardware_model.h"
 #include "../cuda-sim/cuda-sim.h"
@@ -77,6 +77,8 @@ class gpgpu_sim_wrapper {};
 #include <iostream>
 #include <sstream>
 #include <string>
+
+int actw;
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
@@ -1635,6 +1637,7 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
   symbol_table *symtab = kernel_func_info->get_symtab();
   unsigned ctaid = kernel.get_next_cta_id_single();
   checkpoint *g_checkpoint = new checkpoint();
+  actw = 0; 
   for (unsigned i = start_thread; i < end_thread; i++) {
     m_threadState[i].m_cta_id = free_cta_hw_id;
     unsigned warp_id = i / m_config->warp_size;
@@ -1657,6 +1660,7 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
     }
     //
     warps.set(warp_id);
+    actw =  warp_id;
   }
   assert(nthreads_in_block > 0 &&
          nthreads_in_block <=
@@ -1853,6 +1857,22 @@ void gpgpu_sim::cycle() {
         ((gpu_sim_cycle + gpu_tot_sim_cycle) >= g_single_step)) {
       raise(SIGTRAP);  // Debug breakpoint
     }
+
+    /*------Printing colllected stats---------*/
+    max_active=actw+1;
+    cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
+    for(int i=0;i<max_active;i++)
+    {
+	cout<<"warp "<<i<<" ";
+	for(int j=0;j<numstall;j++)
+	{
+		cout<<stallData[i][j]<<" ";
+		stallData[i][j]=0; //reset after printing
+	}
+	cout<<"\n";
+    }
+
+
     gpu_sim_cycle++;
 
     if (g_interactive_debugger_enabled) gpgpu_debug();

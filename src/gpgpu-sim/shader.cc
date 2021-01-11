@@ -47,6 +47,9 @@
 #include "stat-tool.h"
 #include "traffic_breakdown.h"
 #include "visualizer.h"
+#include "fast.h"
+#include <iostream>
+#include "fast.h"
 
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -964,6 +967,8 @@ void shader_core_ctx::fetch() {
             m_last_warp_fetched = warp_id;
             m_warp[warp_id]->set_imiss_pending();
             m_warp[warp_id]->set_last_fetch(m_gpu->gpu_sim_cycle);
+	    stallData[warp_id][imisspendingw]=1;
+
           } else if (status == HIT) {
             m_last_warp_fetched = warp_id;
             m_inst_fetch_buffer = ifetch_buffer_t(pc, nbytes, warp_id);
@@ -972,6 +977,7 @@ void shader_core_ctx::fetch() {
           } else {
             m_last_warp_fetched = warp_id;
             assert(status == RESERVATION_FAIL);
+	    stallData[warp_id][mem_str]=1;
             delete mf;
           }
           break;
@@ -1021,6 +1027,10 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
   updateSIMTStack(warp_id, *pipe_reg);
 
   m_scoreboard->reserveRegisters(*pipe_reg);
+  if(next_inst->op==LOAD_OP||next_inst->op==TENSOR_CORE_LOAD_OP||next_inst->op==TENSOR_CORE_STORE_OP||next_inst->op==STORE_OP)
+	  m_scoreboard->reserveRegistersMem(*pipe_reg);
+  if(next_inst->op==SFU_OP||next_inst->op==TENSOR_CORE_OP||next_inst->op==DP_OP||next_inst->op==SP_OP||next_inst->op==INTP_OP||next_inst->op==ALU_SFU_OP)
+	  m_scoreboard->reserveRegistersComp(*pipe_reg);
   m_warp[warp_id]->set_next_pc(next_inst->pc + next_inst->isize);
 }
 
@@ -1159,11 +1169,14 @@ void scheduler_unit::cycle() {
                                                  // Pascal)
 
     if (warp(warp_id).ibuffer_empty())
+    {
+      stallData[warp_id][ibufferw]=1;
       SCHED_DPRINTF(
           "Warp (warp_id %u, dynamic_warp_id %u) fails as ibuffer_empty\n",
           (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
 
-    if (warp(warp_id).waiting())
+    }
+      if (warp(warp_id).waiting())
       SCHED_DPRINTF(
           "Warp (warp_id %u, dynamic_warp_id %u) fails as waiting for "
           "barrier\n",
@@ -1199,8 +1212,13 @@ void scheduler_unit::cycle() {
           // control hazard
           warp(warp_id).set_next_pc(pc);
           warp(warp_id).ibuffer_flush();
+	  stallData[warp_id][control]=1;
         } else {
           valid_inst = true;
+	  if(m_scoreboard->checkCollisionComp(warp_id, pI) ) 
+		  stallData[warp_id][comp_data]=1;
+	  if(m_scoreboard->checkCollisionMem(warp_id, pI) )
+		  stallData[warp_id][mem_data]=1;
           if (!m_scoreboard->checkCollision(warp_id, pI)) {
             SCHED_DPRINTF(
                 "Warp (warp_id %u, dynamic_warp_id %u) passes scoreboard\n",
@@ -1227,6 +1245,13 @@ void scheduler_unit::cycle() {
                 warp_inst_issued = true;
                 previous_issued_inst_exec_type = exec_unit_type_t::MEM;
               }
+	      else if(!m_mem_out->has_free(m_shader->m_config->sub_core_model,
+                                      m_id) &&
+                  (!diff_exec_units ||
+                   previous_issued_inst_exec_type != exec_unit_type_t::MEM))
+	      {
+		   stallData[warp_id][mem_str]=1;
+	      }
             } else {
               bool sp_pipe_avail =
                   (m_shader->m_config->gpgpu_num_sp_units > 0) &&
@@ -1245,6 +1270,10 @@ void scheduler_unit::cycle() {
                   (m_shader->m_config->gpgpu_num_int_units > 0) &&
                   m_int_out->has_free(m_shader->m_config->sub_core_model, m_id);
 
+	      if(!sp_pipe_avail && !sfu_pipe_avail && !tensor_core_pipe_avail && !dp_pipe_avail && !int_pipe_avail)
+              {
+		stallData[warp_id][comp_str]=1;
+	      }
               // This code need to be refactored
               if (pI->op != TENSOR_CORE_OP && pI->op != SFU_OP &&
                   pI->op != DP_OP && !(pI->op >= SPEC_UNIT_START_ID)) {
@@ -1384,6 +1413,7 @@ void scheduler_unit::cycle() {
             (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
         warp(warp_id).set_next_pc(pc);
         warp(warp_id).ibuffer_flush();
+	stallData[(*iter)->get_warp_id()][control]=1;
       }
       if (warp_inst_issued) {
         SCHED_DPRINTF(
@@ -1769,6 +1799,8 @@ void shader_core_ctx::writeback() {
     m_operand_collector.writeback(*pipe_reg);
     unsigned warp_id = pipe_reg->warp_id();
     m_scoreboard->releaseRegisters(pipe_reg);
+    m_scoreboard->releaseRegistersMem(pipe_reg);
+    m_scoreboard->releaseRegistersComp(pipe_reg);
     m_warp[warp_id]->dec_inst_in_pipeline();
     warp_inst_complete(*pipe_reg);
     m_gpu->gpu_sim_insn_last_update_sid = m_sid;
@@ -1795,6 +1827,7 @@ bool ldst_unit::shared_cycle(warp_inst_t &inst, mem_stage_stall_type &rc_fail,
   if (stall) {
     fail_type = S_MEM;
     rc_fail = BK_CONF;
+    stallData[inst.warp_id()][mem_str]=1;
   } else
     rc_fail = NO_RC_FAIL;
   return !stall;
@@ -1825,6 +1858,7 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     if (!write_sent) delete mf;
   } else if (status == RESERVATION_FAIL) {
     result = BK_CONF;
+    stallData[inst.warp_id()][mem_str]=1;
     assert(!read_sent);
     assert(!write_sent);
     delete mf;
@@ -1833,8 +1867,11 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     // inst.clear_active( access.get_warp_mask() ); // threads in mf writeback
     // when mf returns
     inst.accessq_pop_back();
+    stallData[inst.warp_id()][mem_data]=1;
   }
-  if (!inst.accessq_empty() && result == NO_RC_FAIL) result = COAL_STALL;
+  if (!inst.accessq_empty() && result == NO_RC_FAIL){ result = COAL_STALL;
+  stallData[inst.warp_id()][mem_data]=1;
+  }
   return result;
 }
 
@@ -1892,12 +1929,15 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
         inst.accessq_pop_back();
       } else {
         result = BK_CONF;
+	stallData[inst.warp_id()][mem_str]=1;
         delete mf;
         break;  // do not try again, just break from the loop and try the next
                 // cycle
       }
     }
-    if (!inst.accessq_empty() && result != BK_CONF) result = COAL_STALL;
+    if (!inst.accessq_empty() && result != BK_CONF) {result = COAL_STALL;
+	stallData[inst.warp_id()][mem_data]=1;
+    }
 
     return result;
   } else {
@@ -1967,6 +2007,7 @@ void ldst_unit::L1_latency_queue_cycle() {
       } else if (status == RESERVATION_FAIL) {
         assert(!read_sent);
         assert(!write_sent);
+	stallData[mf_next->get_inst().warp_id()][mem_str]=1;
       } else {
         assert(status == MISS || status == HIT_RESERVED);
         l1_latency_queue[j][0] = NULL;
@@ -2074,7 +2115,9 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
     stall_cond = process_memory_access_queue_l1cache(m_L1D, inst);
   }
   if (!inst.accessq_empty() && stall_cond == NO_RC_FAIL)
-    stall_cond = COAL_STALL;
+  {stall_cond = COAL_STALL;
+	stallData[inst.warp_id()][mem_data]=1;	
+  }
   if (stall_cond != NO_RC_FAIL) {
     stall_reason = stall_cond;
     bool iswrite = inst.is_store();
@@ -3774,12 +3817,15 @@ bool shd_warp_t::waiting() {
     // waiting to be initialized with a kernel
     return true;
   } else if (m_shader->warp_waiting_at_barrier(m_warp_id)) {
+	  stallData[m_warp_id][synco]=1;
     // waiting for other warps in CTA to reach barrier
     return true;
   } else if (m_shader->warp_waiting_at_mem_barrier(m_warp_id)) {
+	  stallData[m_warp_id][synco]=1;
     // waiting for memory barrier
     return true;
   } else if (m_n_atomic > 0) {
+	  stallData[m_warp_id][synco]=1;
     // waiting for atomic operation to complete at memory:
     // this stall is not required for accurate timing model, but rather we
     // stall here since if a call/return instruction occurs in the meantime
@@ -3940,6 +3986,8 @@ void opndcoll_rfu_t::dispatch_ready_cu() {
   for (unsigned p = 0; p < m_dispatch_units.size(); ++p) {
     dispatch_unit_t &du = m_dispatch_units[p];
     collector_unit_t *cu = du.find_ready();
+    if(!cu)
+	    ocempty=ocempty+1;
     if (cu) {
       for (unsigned i = 0; i < (cu->get_num_operands() - cu->get_num_regs());
            i++) {
@@ -3968,9 +4016,11 @@ void opndcoll_rfu_t::dispatch_ready_cu() {
 
 void opndcoll_rfu_t::allocate_cu(unsigned port_num) {
   input_port_t &inp = m_in_ports[port_num];
+  int actv=0;
   for (unsigned i = 0; i < inp.m_in.size(); i++) {
     if ((*inp.m_in[i]).has_ready()) {
       // find a free cu
+      actv=1;
       for (unsigned j = 0; j < inp.m_cu_sets.size(); j++) {
         std::vector<collector_unit_t> &cu_set = m_cus[inp.m_cu_sets[j]];
         bool allocated = false;
@@ -3987,6 +4037,10 @@ void opndcoll_rfu_t::allocate_cu(unsigned port_num) {
       break;  // can only service a single input, if it failed it will fail for
               // others.
     }
+  }
+  if(actv==0)
+  {
+	  ocfull=ocfull+1;
   }
 }
 

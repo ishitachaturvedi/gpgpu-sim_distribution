@@ -28,7 +28,7 @@
 
 #include "gpgpusim_entrypoint.h"
 #include <stdio.h>
-
+#include <iostream>
 #include "../libcuda/gpgpu_context.h"
 #include "cuda-sim/cuda-sim.h"
 #include "cuda-sim/ptx_ir.h"
@@ -37,8 +37,32 @@
 #include "gpgpu-sim/icnt_wrapper.h"
 #include "option_parser.h"
 #include "stream_manager.h"
-
+#include "gpgpu-sim/fast.h"
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+using namespace std;
+
+#include<vector>
+using std::vector;
+
+int cycle_num=0;
+//initialise vector of vectors as stallData[Warp #][stall #]
+vector<vector<int>>stallData;
+//types of stall
+int numstall=8; //8 types of stalls
+int idlew=0;
+int ocfull = 0;
+int ocempty = 0;
+int mem_str = 0;
+int mem_data = 1;
+int synco = 2;
+int comp_str = 3;
+int comp_data = 4;
+int control = 5;
+int ibufferw = 6;
+int imisspendingw = 7;
+//max number of warps active
+int max_active=0;
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
@@ -68,6 +92,8 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 }
 
 static void termination_callback() {
+  cout<<"OC full could not accept OC request (back end stall) "<<ocfull<<"\n";
+  cout<<"OC empty nohing to send to back end (front end stall) "<<ocempty<<"\n";
   printf("GPGPU-Sim: *** exit detected ***\n");
   fflush(stdout);
 }
@@ -75,6 +101,7 @@ static void termination_callback() {
 void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   atexit(termination_callback);
+  stallData.resize(200,vector<int>(numstall,0));
   // concurrent kernel execution simulation thread
   do {
     if (g_debug_execution >= 3) {

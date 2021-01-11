@@ -45,7 +45,7 @@
 #include "mem_fetch.h"
 #include "mem_latency_stat.h"
 #include "shader.h"
-
+#include "fast.h"
 mem_fetch *partition_mf_allocator::alloc(new_addr_type addr,
                                          mem_access_type type, unsigned size,
                                          bool wr,
@@ -267,7 +267,10 @@ void memory_partition_unit::simple_dram_model_cycle() {
     if (!m_sub_partition[spid]->L2_dram_queue_empty() &&
         can_issue_to_dram(spid)) {
       mem_fetch *mf = m_sub_partition[spid]->L2_dram_queue_top();
-      if (m_dram->full(mf->is_write())) break;
+      if (m_dram->full(mf->is_write())) {
+	      stallData[mf->get_wid()][mem_str]=1;
+	      break;
+      }
 
       m_sub_partition[spid]->L2_dram_queue_pop();
       MEMPART_DPRINTF(
@@ -516,7 +519,8 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
         bool read_sent = was_read_sent(events);
         MEM_SUBPART_DPRINTF("Probing L2 cache Address=%llx, status=%u\n",
                             mf->get_addr(), status);
-
+	if(status==RESERVATION_FAIL)
+		stallData[mf->get_wid()][mem_str]=1;
         if (status == HIT) {
           if (!write_sent) {
             // L2 cache replies

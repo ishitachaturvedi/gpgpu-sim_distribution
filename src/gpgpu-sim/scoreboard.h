@@ -50,6 +50,19 @@ class Scoreboard {
   void printContents() const;
   const bool islongop(unsigned warp_id, unsigned regnum);
 
+  void reserveRegistersMem(const warp_inst_t *inst);
+  void releaseRegistersMem(const warp_inst_t *inst);
+  void releaseRegisterMem(unsigned wid, unsigned regnum);
+
+  void reserveRegistersComp(const warp_inst_t *inst);
+  void releaseRegistersComp(const warp_inst_t *inst);
+  void releaseRegisterComp(unsigned wid, unsigned regnum);
+
+  bool checkCollisionMem(unsigned wid, const inst_t *inst) const;
+  bool pendingWritesMem(unsigned wid) const;
+  bool checkCollisionComp(unsigned wid, const inst_t *inst) const;
+  bool pendingWritesComp(unsigned wid) const;
+
  private:
   void reserveRegister(unsigned wid, unsigned regnum);
   int get_sid() const { return m_sid; }
@@ -61,6 +74,21 @@ class Scoreboard {
   std::vector<std::set<unsigned> > reg_table;
   // Register that depend on a long operation (global, local or tex memory)
   std::vector<std::set<unsigned> > longopregs;
+
+  void reserveRegisterMem(unsigned wid, unsigned regnum);
+  void reserveRegisterComp(unsigned wid, unsigned regnum);
+
+  //keep track of pending writes to memory operations
+  std::vector<std::set<unsigned> > reg_table_mem;
+  //keep track of pending writes to computation operations
+  std::vector<std::set<unsigned> > reg_table_comp;
+  // Register that depend on a long operation (global, local or tex memory)
+  // Register that depend on a long local mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_local;
+  // Register that depend on a long global mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_global;
+  // Register that depend on a long tex mem operation (global, local or tex memory)
+  std::vector<std::set<unsigned> > longopregs_tex;
 
   class gpgpu_t *m_gpu;
 };
