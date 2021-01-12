@@ -63,6 +63,7 @@ int ibufferw = 6;
 int imisspendingw = 7;
 //max number of warps active
 int max_active=0;
+int max_warps_act=0;
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
@@ -92,6 +93,7 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 }
 
 static void termination_callback() {
+  cout<<"Max number of warps "<<max_warps_act<<"\n";
   cout<<"OC full could not accept OC request (back end stall) "<<ocfull<<"\n";
   cout<<"OC empty nohing to send to back end (front end stall) "<<ocempty<<"\n";
   printf("GPGPU-Sim: *** exit detected ***\n");

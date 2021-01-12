@@ -19,4 +19,5 @@ extern int ibufferw;
 extern int imisspendingw;
 //max number of warps active
 extern int max_active;
+extern int max_warps_act;
 
