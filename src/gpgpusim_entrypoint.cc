@@ -48,8 +48,9 @@ using std::vector;
 int cycle_num=0;
 //initialise vector of vectors as stallData[Warp #][stall #]
 vector<vector<int>>stallData;
+vector<int>act_warp;
 //types of stall
-int numstall=8; //8 types of stalls
+int numstall=9; //8 types of stalls
 int idlew=0;
 int ocfull = 0;
 int ocempty = 0;
@@ -61,6 +62,7 @@ int comp_data = 4;
 int control = 5;
 int ibufferw = 6;
 int imisspendingw = 7;
+int pendingWritew = 8;
 //max number of warps active
 int max_active=0;
 int max_warps_act=0;
@@ -104,6 +106,7 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
   atexit(termination_callback);
   stallData.resize(200,vector<int>(numstall,0));
+  act_warp.resize(200,0);
   // concurrent kernel execution simulation thread
   do {
     if (g_debug_execution >= 3) {

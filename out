@@ -1,57 +1,41 @@
 Binary file lib/gcc-6.5.0/cuda-9010/release/libcudart.so matches
-src/gpgpusim_entrypoint.cc:int max_warps=0;
-src/gpgpu-sim/gpu-sim.cc:  for (unsigned w = 0; w < m_config->max_warps_per_shader; w++)
-src/gpgpu-sim/mem_latency_stat.h:  unsigned max_warps;
-src/gpgpu-sim/mem_latency_stat.cc:  max_warps =
-src/gpgpu-sim/shader.cc:  m_warp.resize(m_config->max_warps_per_shader);
-src/gpgpu-sim/shader.cc:  for (unsigned k = 0; k < m_config->max_warps_per_shader; ++k) {
-src/gpgpu-sim/shader.cc:  m_scoreboard = new Scoreboard(m_sid, m_config->max_warps_per_shader, m_gpu);
-src/gpgpu-sim/shader.cc:      m_barriers(this, config->max_warps_per_shader, config->max_cta_per_core,
-src/gpgpu-sim/shader.cc:  assert(warp_id <= m_config->max_warps_per_shader);
-src/gpgpu-sim/shader.cc:      for (unsigned i = 0; i < m_config->max_warps_per_shader; i++) {
-src/gpgpu-sim/shader.cc:            (m_last_warp_fetched + 1 + i) % m_config->max_warps_per_shader;
-src/gpgpu-sim/shader.cc:  assert(m_num_warps_to_limit <= shader->get_config()->max_warps_per_shader);
-src/gpgpu-sim/shader.cc:  for (unsigned i = 0; i < m_config->max_warps_per_shader; i++) {
-src/gpgpu-sim/shader.cc:                             unsigned max_warps_per_core,
-src/gpgpu-sim/shader.cc:  m_max_warps_per_core = max_warps_per_core;
-src/gpgpu-sim/shader.cc:  if (max_warps_per_core > WARP_PER_CTA_MAX) {
-src/gpgpu-sim/shader.cc:        WARP_PER_CTA_MAX, max_warps_per_core);
-src/gpgpu-sim/shader.cc:  printf("  m_max_warps_per_core = %u\n", m_max_warps_per_core);
-src/gpgpu-sim/shader.cc:  for (unsigned i = 0; i < m_config->max_warps_per_shader; i++) {
-src/gpgpu-sim/shader.cc:    // m_memory_stats->memlatstat_read_done(mf,m_shader_config->max_warps_per_shader);
-src/gpgpu-sim/shader.h:  barrier_set_t(shader_core_ctx *shader, unsigned max_warps_per_core,
-src/gpgpu-sim/shader.h:  unsigned m_max_warps_per_core;
-src/gpgpu-sim/shader.h:    max_warps_per_shader = n_thread_per_shader / warp_size;
-src/gpgpu-sim/shader.h:  unsigned max_warps_per_shader;
-Binary file build/gcc-6.5.0/cuda-9010/release/libcuda/libcuda.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/libcuda/cuda_runtime_api.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/debug.o matches
+src/gpgpusim_entrypoint.cc://initialise vector of vectors as stallData[Warp #][stall #]
+src/gpgpusim_entrypoint.cc:vector<vector<int>>stallData;
+src/gpgpusim_entrypoint.cc:  stallData.resize(200,vector<int>(numstall,0));
+src/gpgpu-sim/gpu-sim.cc:		cout<<stallData[i][j]<<" ";
+src/gpgpu-sim/gpu-sim.cc:		stallData[i][j]=0; //reset after printing
+src/gpgpu-sim/shader.cc:		 stallData[warp_id][pendingWritew]=1;
+src/gpgpu-sim/shader.cc:	    stallData[warp_id][imisspendingw]=1;
+src/gpgpu-sim/shader.cc:	    stallData[warp_id][mem_str]=2;
+src/gpgpu-sim/shader.cc:	    stallData[warp_id][mem_str]=1;
+src/gpgpu-sim/shader.cc:      stallData[warp_id][ibufferw]=1;
+src/gpgpu-sim/shader.cc:	  stallData[warp_id][control]=1;
+src/gpgpu-sim/shader.cc:		  stallData[warp_id][comp_data]=1;
+src/gpgpu-sim/shader.cc:		  stallData[warp_id][mem_data]=1;
+src/gpgpu-sim/shader.cc:		   stallData[warp_id][mem_str]=1;
+src/gpgpu-sim/shader.cc:		stallData[warp_id][comp_str]=1;
+src/gpgpu-sim/shader.cc:	stallData[(*iter)->get_warp_id()][control]=1;
+src/gpgpu-sim/shader.cc:    stallData[inst.warp_id()][mem_str]=1;
+src/gpgpu-sim/shader.cc:    stallData[inst.warp_id()][mem_str]=1;
+src/gpgpu-sim/shader.cc:    stallData[inst.warp_id()][mem_data]=1;
+src/gpgpu-sim/shader.cc:  stallData[inst.warp_id()][mem_data]=1;
+src/gpgpu-sim/shader.cc:	stallData[inst.warp_id()][mem_str]=1;
+src/gpgpu-sim/shader.cc:	stallData[inst.warp_id()][mem_data]=1;
+src/gpgpu-sim/shader.cc:	stallData[mf_next->get_inst().warp_id()][mem_str]=1;
+src/gpgpu-sim/shader.cc:	stallData[inst.warp_id()][mem_data]=1;	
+src/gpgpu-sim/shader.cc:      stallData[warp_id][pendingWritew]=1;
+src/gpgpu-sim/shader.cc:	  stallData[m_warp_id][synco]=1;
+src/gpgpu-sim/shader.cc:	  stallData[m_warp_id][synco]=1;
+src/gpgpu-sim/shader.cc:	  stallData[m_warp_id][synco]=1;
+src/gpgpu-sim/fast.h://initialise vector of vectors as stallData[Warp #][stall #]
+src/gpgpu-sim/fast.h:extern vector<vector<int>>stallData;
+src/gpgpu-sim/l2cache.cc:	      stallData[mf->get_wid()][mem_str]=1;
+src/gpgpu-sim/l2cache.cc:		stallData[mf->get_wid()][mem_str]=1;
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpusim_entrypoint.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/power_interface.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/dram_sched.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/gpu-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/stat-tool.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/mem_latency_stat.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/l2cache.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/libgpu_uarch_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/gpu-cache.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/power_stat.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/dram.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/visualizer.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/gpgpu-sim/shader.o matches
 Binary file build/gcc-6.5.0/cuda-9010/release/libgpgpusim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/stream_manager.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/memory.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/instructions.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptx_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda_device_runtime.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_parser.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_ir.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx.tab.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx_loader.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/lex.ptxinfo_.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/libgpgpu_ptx_sim.a matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/cuda-sim.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/cuda-sim/ptx-stats.o matches
-Binary file build/gcc-6.5.0/cuda-9010/release/abstract_hardware_model.o matches
+fast.h://initialise vector of vectors as stallData[Cycle #][Warp #]
+fast.h:extern vector<int> stallData;

@@ -1863,6 +1863,13 @@ void gpgpu_sim::cycle() {
     if(max_warps_act<max_active)
 	max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
+    cout<<"Active ";
+    for(int i=0;i<max_active;i++)
+    {
+	    cout<<act_warp[i]<<" ";
+	    act_warp[i]=0;
+    }
+    cout<<"\n";
     for(int i=0;i<max_active;i++)
     {
 	cout<<"warp "<<i<<" ";
