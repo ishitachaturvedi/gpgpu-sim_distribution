@@ -1320,16 +1320,6 @@ void scheduler_unit::cycle() {
               bool int_pipe_avail =
                   (m_shader->m_config->gpgpu_num_int_units > 0) &&
                   m_int_out->has_free(m_shader->m_config->sub_core_model, m_id);
-              if(!sp_pipe_avail && !sfu_pipe_avail && !tensor_core_pipe_avail && !dp_pipe_avail && !int_pipe_avail)
-                            {
-#ifdef GSI
-                                    //comp str stall //GPU_stuff
-                                    if(tempw[warp_id]>comp_str){
-                                            tempw[warp_id]=comp_str;
-					    comp_str_c=1;
-				    }
-#endif
-                            }
               // This code need to be refactored
               if (pI->op != TENSOR_CORE_OP && pI->op != SFU_OP &&
                   pI->op != DP_OP && !(pI->op >= SPEC_UNIT_START_ID)) {
@@ -1352,7 +1342,11 @@ void scheduler_unit::cycle() {
                          !(diff_exec_units && previous_issued_inst_exec_type ==
                                                   exec_unit_type_t::SP))
                   execute_on_SP = true;
-
+		else
+                     {if(tempw[warp_id]>comp_str){
+                                            tempw[warp_id]=comp_str;
+                                            comp_str_c=1;
+                        }}
                 if (execute_on_INT || execute_on_SP) {
                   // Jin: special for CDP api
                   if (pI->m_is_cdp && !warp(warp_id).m_cdp_dummy) {
@@ -1404,6 +1398,11 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::DP;
                 }
+		else
+		{if(tempw[warp_id]>comp_str){
+                                            tempw[warp_id]=comp_str;
+					    comp_str_c=1;
+			}}
               }  // If the DP units = 0 (like in Fermi archi), then execute DP
                  // inst on SFU unit
               else if (((m_shader->m_config->gpgpu_num_dp_units == 0 &&
@@ -1419,7 +1418,13 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::SFU;
                 }
-              } else if ((pI->op == TENSOR_CORE_OP) &&
+		else 
+                     {if(tempw[warp_id]>comp_str){
+                                            tempw[warp_id]=comp_str;
+                                            comp_str_c=1;
+                        }}
+
+	      } else if ((pI->op == TENSOR_CORE_OP) &&
                          !(diff_exec_units && previous_issued_inst_exec_type ==
                                                   exec_unit_type_t::TENSOR)) {
                 if (tensor_core_pipe_avail) {
@@ -1430,6 +1435,11 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::TENSOR;
                 }
+		else
+			{if(tempw[warp_id]>comp_str){
+                                            tempw[warp_id]=comp_str;
+                                            comp_str_c=1;
+                        }}
               } else if ((pI->op >= SPEC_UNIT_START_ID) &&
                          !(diff_exec_units &&
                            previous_issued_inst_exec_type ==
@@ -1452,6 +1462,11 @@ void scheduler_unit::cycle() {
                   previous_issued_inst_exec_type =
                       exec_unit_type_t::SPECIALIZED;
                 }
+		else 
+			{if(tempw[warp_id]>comp_str){
+                                            tempw[warp_id]=comp_str;
+                                            comp_str_c=1;
+                        }}
               }
 
             }  // end of else
