@@ -1860,30 +1860,63 @@ void gpgpu_sim::cycle() {
 
     /*------Printing colllected stats---------*/
     max_active=actw+1;
+    if(ocfull_c>0)
+	    ocfull++;
+    if(ocempty_c>0)
+	    ocempty++;
+    ocfull_c=0;
+    ocempty_c=0;
     if(max_warps_act<max_active)
 	max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
+    cout<<"max_oc "<<max_oc_avail<<" oc_alloc "<<oc_alloc<<"\n";
+    cout<<"max_disp "<<max_oc_disp<<" oc_disp "<<oc_disp<<"\n";
     cout<<"Active ";
     for(int i=0;i<max_active;i++)
     {
 	    cout<<act_warp[i]<<" ";
 	    act_warp[i]=0;
     }
+    cout<<"Warps active "<<max_active<<"\n";
+    cout<<"ocempty "<<ocempty<<"\n";
+    cout<<"ocfull "<<ocfull<<"\n";
     cout<<"\n";
-    for(int i=0;i<max_active;i++)
+    cout<<"max shader "<<max_sid<<"\n";
+    /*for(int i=0;i<max_active;i++)
     {
 	cout<<"warp "<<i<<" ";
 	for(int j=0;j<numstall;j++)
 	{
-		cout<<stallData[i][j]<<" ";
-		stallData[i][j]=0; //reset after printing
+		cout<<stallData[i][j][0]<<" : "<<stallData[i][j][1]<< " ; ";
+		stallData[i][j][0]=-1; //reset after printing
+		stallData[i][j][1]=-1;
 	}
 	cout<<"\n";
+    }*/
+
+    for(int k=0;k<max_sid;k++)
+    {
+	    cout<<"SID "<<k<<"\n";
+	    for(int i=0;i<max_active;i++)
+	    {
+		 cout<<"warp "<<i<<" ";
+		 for(int j=0;j<numstall;j++)
+       		 {
+                	cout<<stallData[k][i][j][0]<<" : "<<stallData[k][i][j][1]<< " ; ";
+                	stallData[k][i][j][0]=-1; //reset after printing
+                	stallData[k][i][j][1]=-1;
+        	}
+        	cout<<"\n";
+	    }
+	    cout<<"****************\n";
     }
 
-
     gpu_sim_cycle++;
-
+    max_oc_avail=0;
+    oc_alloc=0;
+    max_oc_disp=0;
+    oc_disp=0;
+    max_sid=0;
     if (g_interactive_debugger_enabled) gpgpu_debug();
 
       // McPAT main cycle (interface with McPAT)

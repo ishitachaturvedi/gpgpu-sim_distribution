@@ -42,7 +42,7 @@
 #include <set>
 #include <utility>
 #include <vector>
-
+#include <iostream>
 //#include "../cuda-sim/ptx.tab.h"
 
 #include "../abstract_hardware_model.h"
@@ -69,7 +69,6 @@
 #define WRITE_PACKET_SIZE 8
 
 #define WRITE_MASK_SIZE 8
-
 class gpgpu_context;
 
 enum exec_unit_type_t {
@@ -171,6 +170,9 @@ class shd_warp_t {
   virtual address_type get_pc() const { return m_next_pc; }
   void set_next_pc(address_type pc) { m_next_pc = pc; }
 
+  virtual address_type get_pc_present() const { return m_pc_p; }
+  void set_pc_present() { m_pc_p = m_next_pc; }
+
   void store_info_of_last_inst_at_barrier(const warp_inst_t *pI) {
     m_inst_at_barrier = *pI;
   }
@@ -248,6 +250,7 @@ class shd_warp_t {
   unsigned m_dynamic_warp_id;
 
   address_type m_next_pc;
+  address_type m_pc_p;
   unsigned n_completed;  // number of threads in warp completed
   std::bitset<MAX_WARP_SIZE> m_active_threads;
 

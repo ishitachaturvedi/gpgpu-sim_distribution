@@ -32,7 +32,7 @@
 
 #include <list>
 #include <set>
-
+#include <iostream>
 #include "../abstract_hardware_model.h"
 #include "../option_parser.h"
 #include "../statwrapper.h"
@@ -46,6 +46,8 @@
 #include "mem_latency_stat.h"
 #include "shader.h"
 #include "fast.h"
+
+using namespace std;
 mem_fetch *partition_mf_allocator::alloc(new_addr_type addr,
                                          mem_access_type type, unsigned size,
                                          bool wr,
@@ -268,8 +270,18 @@ void memory_partition_unit::simple_dram_model_cycle() {
         can_issue_to_dram(spid)) {
       mem_fetch *mf = m_sub_partition[spid]->L2_dram_queue_top();
       if (m_dram->full(mf->is_write())) {
-	      stallData[mf->get_wid()][mem_str]=1;
+	      stallData[mf->get_sid()][mf->get_wid()][mem_str][1]=1;
+	      stallData[mf->get_sid()][mf->get_wid()][mem_str][0]=mf->get_pc();
+	      if(mf->get_sid()>max_sid)
+        		max_sid=mf->get_sid();
 	      break;
+      }
+      else
+      { //cout<<"23\n";
+	      stallData[mf->get_sid()][mf->get_wid()][mem_str][1]=2;
+	      stallData[mf->get_sid()][mf->get_wid()][mem_str][0]=mf->get_pc();
+	      if(mf->get_sid()>max_sid)
+        		max_sid=mf->get_sid();
       }
 
       m_sub_partition[spid]->L2_dram_queue_pop();
@@ -519,8 +531,19 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
         bool read_sent = was_read_sent(events);
         MEM_SUBPART_DPRINTF("Probing L2 cache Address=%llx, status=%u\n",
                             mf->get_addr(), status);
-	if(status==RESERVATION_FAIL)
-		stallData[mf->get_wid()][mem_str]=1;
+	if(status==RESERVATION_FAIL){
+	        if(mf->get_sid()>max_sid)
+        		max_sid=mf->get_sid();	
+		stallData[mf->get_sid()][mf->get_wid()][mem_str][1]=1;
+		stallData[mf->get_sid()][mf->get_wid()][mem_str][0]=mf->get_pc();
+	}
+	else
+	{//cout<<"22\n";
+		if(mf->get_sid()>max_sid)
+        		max_sid=mf->get_sid();
+		stallData[mf->get_sid()][mf->get_wid()][mem_str][1]=2;
+		stallData[mf->get_sid()][mf->get_wid()][mem_str][0]=mf->get_pc();
+	}
         if (status == HIT) {
           if (!write_sent) {
             // L2 cache replies
