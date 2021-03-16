@@ -362,6 +362,7 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
   // all the derived schedulers.  The scheduler's behaviour can be
   // modified by changing the contents of the m_next_cycle_prioritized_warps
   // list.
+  void verify_stall(int i, exec_unit_type_t type);
   void cycle();
 
   // These are some common ordering fucntions that the
