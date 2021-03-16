@@ -50,7 +50,6 @@
 #include "l2cache.h"
 #include "shader.h"
 #include "stat-tool.h"
-#include "fast.h"
 #include "../../libcuda/gpgpu_context.h"
 #include "../abstract_hardware_model.h"
 #include "../cuda-sim/cuda-sim.h"
@@ -75,6 +74,7 @@ class gpgpu_sim_wrapper {};
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
+#include "fast.h"
 #include <sstream>
 #include <string>
 
@@ -1860,14 +1860,8 @@ void gpgpu_sim::cycle() {
 
     /*------Printing colllected stats---------*/
     max_active=actw+1;
-    if(ocfull_c>0)
-	    ocfull++;
-    if(ocempty_c>0)
-	    ocempty++;
-    ocfull_c=0;
-    ocempty_c=0;
     if(max_warps_act<max_active)
-	max_warps_act=max_active;
+	    max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
     cout<<"max_oc "<<max_oc_avail<<" oc_alloc "<<oc_alloc<<"\n";
     cout<<"max_disp "<<max_oc_disp<<" oc_disp "<<oc_disp<<"\n";
@@ -1878,37 +1872,27 @@ void gpgpu_sim::cycle() {
 	    act_warp[i]=0;
     }
     cout<<"Warps active "<<max_active<<"\n";
-    cout<<"ocempty "<<ocempty<<"\n";
-    cout<<"ocfull "<<ocfull<<"\n";
     cout<<"\n";
     cout<<"max shader "<<max_sid<<"\n";
-    /*for(int i=0;i<max_active;i++)
-    {
-	cout<<"warp "<<i<<" ";
-	for(int j=0;j<numstall;j++)
-	{
-		cout<<stallData[i][j][0]<<" : "<<stallData[i][j][1]<< " ; ";
-		stallData[i][j][0]=-1; //reset after printing
-		stallData[i][j][1]=-1;
-	}
-	cout<<"\n";
-    }*/
 
     for(int k=0;k<max_sid;k++)
     {
-	    cout<<"SID "<<k<<"\n";
-	    for(int i=0;i<max_active;i++)
-	    {
-		 cout<<"warp "<<i<<" ";
-		 for(int j=0;j<numstall;j++)
-       		 {
-                	cout<<stallData[k][i][j][0]<<" : "<<stallData[k][i][j][1]<< " ; ";
-                	stallData[k][i][j][0]=-1; //reset after printing
-                	stallData[k][i][j][1]=-1;
-        	}
-        	cout<<"\n";
-	    }
-	    cout<<"****************\n";
+      cout<<"SID "<<k<<"\n";
+      for(int i=0;i<max_active;i++)
+      {
+        cout<<"warp "<<i<<" ";
+        for(int j=0;j<numstall;j++)
+        {
+          cout<<stallData[k][i][j]<< " ; ";
+          stallData[k][i][j]=-1;
+        }
+        cout<<"\n";
+      }
+      cout<<"warp dispatches "<<warpDispatch[k]<<"\n";
+      cout<<"#inst dispatched "<<nDispatch[k]<<"\n";
+      warpDispatch[k] = -1;
+      nDispatch[k] = 0;
+      cout<<"****************\n";
     }
 
     gpu_sim_cycle++;
