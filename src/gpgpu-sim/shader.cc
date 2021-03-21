@@ -1380,10 +1380,9 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
     if ((*iter) == NULL) {
       continue;
     }
-    if ((*iter)->done_exit())
-    {
+    if ((*iter)->done_exit()) {
       if ((*iter)->get_warp_id() >= 0)
-        stallData[m_shader->get_sid()][warp_id][idlew]=1;
+        stallData[m_shader->get_sid()][(*iter)->get_warp_id()][idlew]=1;
       continue;
     }
     act_warp[(*iter)->get_warp_id()] += 1;
