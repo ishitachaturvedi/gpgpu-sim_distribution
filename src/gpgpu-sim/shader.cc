@@ -1181,14 +1181,22 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   // We check control with whatever was in the buffer, otherwise
   // pc will not differ
   warp_inst_t *pIControl = NULL;
+  unsigned pc, rpc;
+  bool buffer_inst_good = false;
+
   if (!warp(warp_id).ibuffer_empty())
   {
     const warp_inst_t* pIControl = warp(warp_id).ibuffer_next_inst();
     bool valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
+      m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
       if (pc != pIControl->pc) {
         stallData[m_shader->get_sid()][warp_id][control]=1;
+      }
+      else
+      {
+        buffer_inst_good = true;
       }
     }
     else if (valid) {
@@ -1198,10 +1206,17 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   // For stall purposes we get the next instruction even if 
   // if the ibuffer is empty. But we do not modify the state of the warp
-  const warp_inst_t *pI = m_shader->get_next_inst(warp_id, pc);
-  unsigned pc, rpc;
-  
-  m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
+  const warp_inst_t *pI;
+  if (buffer_inst_good)
+  {
+    pI = pIControl;
+  }
+  else
+  {
+    pc = m_warp[warp_id]->get_pc();
+    m_shader->get_next_inst(warp_id, pc);
+    m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
+  }
 
   if (pI && pI->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
     assert(warp(warp_id).m_cdp_dummy);
@@ -1220,122 +1235,120 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
         stallData[m_shader->get_sid()][warp_id][mem_data]=1;
       }
 
-        const active_mask_t &active_mask =
-            m_shader->get_active_mask(warp_id, pI);
+      const active_mask_t &active_mask = m_shader->get_active_mask(warp_id, pI);
 
+      if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
+          (pI->op == MEMORY_BARRIER_OP) ||
+          (pI->op == TENSOR_CORE_LOAD_OP) ||
+          (pI->op == TENSOR_CORE_STORE_OP)) {          
+        if (m_mem_out->has_free(m_shader->m_config->sub_core_model, m_id)
+          && (!diff_exec_units || previous_issued_inst_exec_type != exec_unit_type_t::MEM))
+        {}
+        else
+        {
+          stallData[m_shader->get_sid()][warp_id][mem_str]=1;
+        }
+      }
+      else {
+        bool sp_pipe_avail =
+            (m_shader->m_config->gpgpu_num_sp_units > 0) &&
+            m_sp_out->has_free(m_shader->m_config->sub_core_model, m_id);
+        bool sfu_pipe_avail =
+            (m_shader->m_config->gpgpu_num_sfu_units > 0) &&
+            m_sfu_out->has_free(m_shader->m_config->sub_core_model, m_id);
+        bool tensor_core_pipe_avail =
+            (m_shader->m_config->gpgpu_num_tensor_core_units > 0) &&
+            m_tensor_core_out->has_free(
+                m_shader->m_config->sub_core_model, m_id);
+        bool dp_pipe_avail =
+            (m_shader->m_config->gpgpu_num_dp_units > 0) &&
+            m_dp_out->has_free(m_shader->m_config->sub_core_model, m_id);
+        bool int_pipe_avail =
+            (m_shader->m_config->gpgpu_num_int_units > 0) &&
+            m_int_out->has_free(m_shader->m_config->sub_core_model, m_id);
 
-        if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
-            (pI->op == MEMORY_BARRIER_OP) ||
-            (pI->op == TENSOR_CORE_LOAD_OP) ||
-            (pI->op == TENSOR_CORE_STORE_OP)) {          
-          if (m_mem_out->has_free(m_shader->m_config->sub_core_model, m_id)
-            && (!diff_exec_units || previous_issued_inst_exec_type != exec_unit_type_t::MEM))
-          {}
+        // This code need to be refactored
+        if (pI->op != TENSOR_CORE_OP && pI->op != SFU_OP &&
+            pI->op != DP_OP && !(pI->op >= SPEC_UNIT_START_ID)) {
+          bool execute_on_SP = false;
+          bool execute_on_INT = false;
+
+          // if INT unit pipline exist, then execute ALU and INT
+          // operations on INT unit and SP-FPU on SP unit (like in Volta)
+          // if INT unit pipline does not exist, then execute all ALU, INT
+          // and SP operations on SP unit (as in Fermi, Pascal GPUs)
+          if (m_shader->m_config->gpgpu_num_int_units > 0 &&
+              int_pipe_avail && pI->op != SP_OP &&
+              !(diff_exec_units &&
+                previous_issued_inst_exec_type == exec_unit_type_t::INT))
+            execute_on_INT = true;
+          else if (sp_pipe_avail &&
+                    (m_shader->m_config->gpgpu_num_int_units == 0 ||
+                    (m_shader->m_config->gpgpu_num_int_units > 0 &&
+                      pI->op == SP_OP)) &&
+                    !(diff_exec_units && previous_issued_inst_exec_type ==
+                                            exec_unit_type_t::SP))
+            execute_on_SP = true;
+
+          if (execute_on_INT || execute_on_SP) {
+            if (pI->m_is_cdp && !warp(warp_id).m_cdp_dummy) {
+              if (pI->m_is_cdp != 1) { return; }
+            }
+          }
           else
           {
-            stallData[m_shader->get_sid()][warp_id][mem_str]=1;
-          }
-        }
-        else {
-          bool sp_pipe_avail =
-              (m_shader->m_config->gpgpu_num_sp_units > 0) &&
-              m_sp_out->has_free(m_shader->m_config->sub_core_model, m_id);
-          bool sfu_pipe_avail =
-              (m_shader->m_config->gpgpu_num_sfu_units > 0) &&
-              m_sfu_out->has_free(m_shader->m_config->sub_core_model, m_id);
-          bool tensor_core_pipe_avail =
-              (m_shader->m_config->gpgpu_num_tensor_core_units > 0) &&
-              m_tensor_core_out->has_free(
-                  m_shader->m_config->sub_core_model, m_id);
-          bool dp_pipe_avail =
-              (m_shader->m_config->gpgpu_num_dp_units > 0) &&
-              m_dp_out->has_free(m_shader->m_config->sub_core_model, m_id);
-          bool int_pipe_avail =
-              (m_shader->m_config->gpgpu_num_int_units > 0) &&
-              m_int_out->has_free(m_shader->m_config->sub_core_model, m_id);
-
-          // This code need to be refactored
-          if (pI->op != TENSOR_CORE_OP && pI->op != SFU_OP &&
-              pI->op != DP_OP && !(pI->op >= SPEC_UNIT_START_ID)) {
-            bool execute_on_SP = false;
-            bool execute_on_INT = false;
-
-            // if INT unit pipline exist, then execute ALU and INT
-            // operations on INT unit and SP-FPU on SP unit (like in Volta)
-            // if INT unit pipline does not exist, then execute all ALU, INT
-            // and SP operations on SP unit (as in Fermi, Pascal GPUs)
-            if (m_shader->m_config->gpgpu_num_int_units > 0 &&
-                int_pipe_avail && pI->op != SP_OP &&
-                !(diff_exec_units &&
-                  previous_issued_inst_exec_type == exec_unit_type_t::INT))
-              execute_on_INT = true;
-            else if (sp_pipe_avail &&
-                      (m_shader->m_config->gpgpu_num_int_units == 0 ||
-                      (m_shader->m_config->gpgpu_num_int_units > 0 &&
-                        pI->op == SP_OP)) &&
-                      !(diff_exec_units && previous_issued_inst_exec_type ==
-                                              exec_unit_type_t::SP))
-              execute_on_SP = true;
-
-            if (execute_on_INT || execute_on_SP) {
-              if (pI->m_is_cdp && !warp(warp_id).m_cdp_dummy) {
-                if (pI->m_is_cdp != 1) { return; }
-              }
-            }
-            else
-            {
-               stallData[m_shader->get_sid()][warp_id][comp_str]=1;
-            }
-          } else if ((m_shader->m_config->gpgpu_num_dp_units > 0) &&
-                      (pI->op == DP_OP) &&
-                      !(diff_exec_units && previous_issued_inst_exec_type ==
-                                              exec_unit_type_t::DP)) {
-            if (dp_pipe_avail) {}
-            else {
               stallData[m_shader->get_sid()][warp_id][comp_str]=1;
-            }
-          }  // If the DP units = 0 (like in Fermi archi), then execute DP
-              // inst on SFU unit
-          else if (((m_shader->m_config->gpgpu_num_dp_units == 0 &&
-                      pI->op == DP_OP) ||
-                    (pI->op == SFU_OP) || (pI->op == ALU_SFU_OP)) &&
+          }
+        } else if ((m_shader->m_config->gpgpu_num_dp_units > 0) &&
+                    (pI->op == DP_OP) &&
                     !(diff_exec_units && previous_issued_inst_exec_type ==
-                                            exec_unit_type_t::SFU)) {
-            if (sfu_pipe_avail) {}
-            else {
-              stallData[m_shader->get_sid()][warp_id][comp_str]=1;
-            }
-          } else if ((pI->op == TENSOR_CORE_OP) &&
-                      !(diff_exec_units && previous_issued_inst_exec_type ==
-                                              exec_unit_type_t::TENSOR)) {
-            if (tensor_core_pipe_avail) {}
-            else {
-              stallData[m_shader->get_sid()][warp_id][comp_str]=1;
-            }
-          } else if ((pI->op >= SPEC_UNIT_START_ID) &&
-                      !(diff_exec_units &&
-                        previous_issued_inst_exec_type ==
-                            exec_unit_type_t::SPECIALIZED)) {
-            unsigned spec_id = pI->op - SPEC_UNIT_START_ID;
-            assert(spec_id < m_shader->m_config->m_specialized_unit.size());
-            register_set *spec_reg_set = m_spec_cores_out[spec_id];
-            bool spec_pipe_avail =
-                (m_shader->m_config->m_specialized_unit[spec_id].num_units >
-                  0) &&
-                spec_reg_set->has_free(m_shader->m_config->sub_core_model,
-                                        m_id);
+                                            exec_unit_type_t::DP)) {
+          if (dp_pipe_avail) {}
+          else {
+            stallData[m_shader->get_sid()][warp_id][comp_str]=1;
+          }
+        }  // If the DP units = 0 (like in Fermi archi), then execute DP
+            // inst on SFU unit
+        else if (((m_shader->m_config->gpgpu_num_dp_units == 0 &&
+                    pI->op == DP_OP) ||
+                  (pI->op == SFU_OP) || (pI->op == ALU_SFU_OP)) &&
+                  !(diff_exec_units && previous_issued_inst_exec_type ==
+                                          exec_unit_type_t::SFU)) {
+          if (sfu_pipe_avail) {}
+          else {
+            stallData[m_shader->get_sid()][warp_id][comp_str]=1;
+          }
+        } else if ((pI->op == TENSOR_CORE_OP) &&
+                    !(diff_exec_units && previous_issued_inst_exec_type ==
+                                            exec_unit_type_t::TENSOR)) {
+          if (tensor_core_pipe_avail) {}
+          else {
+            stallData[m_shader->get_sid()][warp_id][comp_str]=1;
+          }
+        } else if ((pI->op >= SPEC_UNIT_START_ID) &&
+                    !(diff_exec_units &&
+                      previous_issued_inst_exec_type ==
+                          exec_unit_type_t::SPECIALIZED)) {
+          unsigned spec_id = pI->op - SPEC_UNIT_START_ID;
+          assert(spec_id < m_shader->m_config->m_specialized_unit.size());
+          register_set *spec_reg_set = m_spec_cores_out[spec_id];
+          bool spec_pipe_avail =
+              (m_shader->m_config->m_specialized_unit[spec_id].num_units >
+                0) &&
+              spec_reg_set->has_free(m_shader->m_config->sub_core_model,
+                                      m_id);
 
-            if (spec_pipe_avail) {}
-            else {
-              stallData[m_shader->get_sid()][warp_id][comp_str]=1;
-            }
+          if (spec_pipe_avail) {}
+          else {
+            stallData[m_shader->get_sid()][warp_id][comp_str]=1;
           }
         }
+      }
     }
-  } else if (valid) {
-    // this case can happen after a return instruction in diverged warp
-    stallData[m_shader->get_sid()][warp_id][control]=1;
-  }
+    else if (valid) {
+      // this case can happen after a return instruction in diverged warp
+      stallData[m_shader->get_sid()][warp_id][control]=1;
+    }
 }
 
 void scheduler_unit::cycle() {
