@@ -233,7 +233,7 @@ void shader_core_ctx::create_schedulers() {
   }
 
   for (unsigned i = 0; i < m_warp.size(); i++) {
-    // distribute i's evenly though schedulers;
+	  // distribute i's evenly though schedulers;
     schedulers[i % m_config->gpgpu_num_sched_per_core]->add_supervised_warp_id(
         i);
   }
@@ -1026,7 +1026,6 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
       pipe_reg_set.get_free(m_config->sub_core_model, sch_id);
   assert(pipe_reg);
   act_warp[warp_id]=1;
-  //cout<<"issued warp "<<warp_id<<" TB "<<m_warp[warp_id]->get_cta_id()<<"\n";
   m_warp[warp_id]->ibuffer_free();
   assert(next_inst->valid());
   **pipe_reg = *next_inst;  // static instruction information
@@ -1178,7 +1177,6 @@ void scheduler_unit::cycle() {
     if ((*iter) == NULL || (*iter)->done_exit()) {
       continue;
     }
-    //cout<<"NEW WARP STARTED "<<(*iter)->get_warp_id()<<"\n";
     SCHED_DPRINTF("Testing (warp_id %u, dynamic_warp_id %u)\n",
                   (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
     unsigned warp_id = (*iter)->get_warp_id();
@@ -1208,10 +1206,6 @@ void scheduler_unit::cycle() {
           "barrier\n",
           (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
       }
-      //if(pr==0)
-            //cout<<"warp "<<warp_id<<"no synco "<<(*iter)->get_pc_present()<<" shader "<<m_shader->get_sid()<<"\n";
-    //else
-            //cout<<"warp "<<warp_id<<"synco "<<(*iter)->get_pc_present()<<"\n";
     if (warp(warp_id).ibuffer_empty())
     {
       stallData[m_shader->get_sid()][warp_id][ibufferw][1]=1;
@@ -1221,10 +1215,6 @@ void scheduler_unit::cycle() {
           (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
 
     }
-    //if(pr==0)
-	    //cout<<"warp "<<warp_id<<"no ibuffer "<<(*iter)->get_pc_present()<<"\n";
-    //else
-	    //cout<<"warp "<<warp_id<<"ibuffer "<<(*iter)->get_pc_present()<<"\n";
     while (!warp(warp_id).waiting() && !warp(warp_id).ibuffer_empty() &&
            (checked < max_issue) && (checked <= issued) &&
            (issued < max_issue)) {
@@ -1258,31 +1248,25 @@ void scheduler_unit::cycle() {
           warp(warp_id).ibuffer_flush();
 	  stallData[m_shader->get_sid()][warp_id][control][1]=1;
 	  stallData[m_shader->get_sid()][warp_id][control][0]=(*iter)->get_pc_present();
-	  //cout<<"warp "<<warp_id<<"control "<<(*iter)->get_pc_present()<<"\n";
         } else {
 		stallData[m_shader->get_sid()][warp_id][control][1]=2;
-		//cout<<"warp "<<warp_id<<"no control "<<(*iter)->get_pc_present()<<"\n";
 	  stallData[m_shader->get_sid()][warp_id][control][0]=(*iter)->get_pc_present();
 	  stallData[m_shader->get_sid()][warp_id][comp_data][0]=(*iter)->get_pc_present();
 	  stallData[m_shader->get_sid()][warp_id][mem_data][0]=(*iter)->get_pc_present();
           valid_inst = true;
 	  if(m_scoreboard->checkCollisionComp(warp_id, pI) ) 
 	         {stallData[m_shader->get_sid()][warp_id][comp_data][1]=1;
-			//cout<<"warp "<<warp_id<<"comp_data "<<(*iter)->get_pc_present()<<"\n";
 		 }
 	  else
 	  {
 		  stallData[m_shader->get_sid()][warp_id][comp_data][1]=2;
-		  //cout<<"warp "<<warp_id<<"no comp_data "<<(*iter)->get_pc_present()<<"\n";
 	  }
 	  if(m_scoreboard->checkCollisionMem(warp_id, pI) ){
 		  stallData[m_shader->get_sid()][warp_id][mem_data][1]=1;
-		  //cout<<"warp "<<warp_id<<"mem_data "<<(*iter)->get_pc_present()<<"\n";
 	  }
 	  else
 	  {
 		  stallData[m_shader->get_sid()][warp_id][mem_data][1]=2;
-		  //cout<<"warp "<<warp_id<<"no mem_data "<<(*iter)->get_pc_present()<<"\n";
 	  }
           if (!m_scoreboard->checkCollision(warp_id, pI)) {
             SCHED_DPRINTF(
@@ -1311,7 +1295,6 @@ void scheduler_unit::cycle() {
                 warp_inst_issued = true;
                 previous_issued_inst_exec_type = exec_unit_type_t::MEM;
 		stallData[m_shader->get_sid()][warp_id][mem_str][1]=2;
-		//cout<<"warp "<<warp_id<<"no mem_str "<<(*iter)->get_pc_present()<<"\n";
               }
 	      else if(!m_mem_out->has_free(m_shader->m_config->sub_core_model,
                                       m_id) &&
@@ -1319,7 +1302,6 @@ void scheduler_unit::cycle() {
                    previous_issued_inst_exec_type != exec_unit_type_t::MEM))
 	      {
 		   stallData[m_shader->get_sid()][warp_id][mem_str][1]=1;
-		   //cout<<"warp "<<warp_id<<"mem_str "<<(*iter)->get_pc_present()<<"\n";
 	      }
             } else {
               bool sp_pipe_avail =
@@ -1413,12 +1395,10 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::DP;
 		  stallData[m_shader->get_sid()][warp_id][comp_str][1]=2;
-		  //cout<<"warp "<<warp_id<<"no comp_str "<<(*iter)->get_pc_present()<<"\n";
                 }
 		else
 		{
 			stallData[m_shader->get_sid()][warp_id][comp_str][1]=1;
-			//cout<<"warp "<<warp_id<<"comp_str "<<(*iter)->get_pc_present()<<"\n";
 
 		}
               }  // If the DP units = 0 (like in Fermi archi), then execute DP
@@ -1436,11 +1416,9 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::SFU;
 		  stallData[m_shader->get_sid()][warp_id][comp_str][1]=2;
-		  //cout<<"warp "<<warp_id<<"no comp_str "<<(*iter)->get_pc_present()<<"\n";
                 }
 		else{
 			stallData[m_shader->get_sid()][warp_id][comp_str][1]=1;
-			//cout<<"warp "<<warp_id<<"comp_str "<<(*iter)->get_pc_present()<<"\n";
 		}
               } else if ((pI->op == TENSOR_CORE_OP) &&
                          !(diff_exec_units && previous_issued_inst_exec_type ==
@@ -1453,11 +1431,9 @@ void scheduler_unit::cycle() {
                   warp_inst_issued = true;
                   previous_issued_inst_exec_type = exec_unit_type_t::TENSOR;
 		  stallData[m_shader->get_sid()][warp_id][comp_str][1]=2;
-		  //cout<<"warp "<<warp_id<<"no comp_str "<<(*iter)->get_pc_present()<<"\n";
                 }
 		else{
 			stallData[m_shader->get_sid()][warp_id][comp_str][1]=1;
-			//cout<<"warp "<<warp_id<<"comp_str "<<(*iter)->get_pc_present()<<"\n";
 		}
               } else if ((pI->op >= SPEC_UNIT_START_ID) &&
                          !(diff_exec_units &&
@@ -1481,11 +1457,9 @@ void scheduler_unit::cycle() {
                   previous_issued_inst_exec_type =
                       exec_unit_type_t::SPECIALIZED;
 		  stallData[m_shader->get_sid()][warp_id][comp_str][1]=2;
-		  //cout<<"warp "<<warp_id<<"no comp_str "<<(*iter)->get_pc_present()<<"\n";
                 }
 		else{
 			stallData[m_shader->get_sid()][warp_id][comp_str][1]=1;
-			//cout<<"warp "<<warp_id<<"comp_str "<<(*iter)->get_pc_present()<<"\n";
 		}
               }
 
@@ -1497,7 +1471,6 @@ void scheduler_unit::cycle() {
           }
         }
 	stallData[m_shader->get_sid()][(*iter)->get_warp_id()][control][1]=2;
-	//cout<<"warp "<<warp_id<<"no control "<<(*iter)->get_pc_present()<<"\n";
 	stallData[m_shader->get_sid()][(*iter)->get_warp_id()][control][0]=(*iter)->get_pc_present();
       } else if (valid) {
         // this case can happen after a return instruction in diverged warp
@@ -1508,7 +1481,6 @@ void scheduler_unit::cycle() {
         warp(warp_id).set_next_pc(pc);
         warp(warp_id).ibuffer_flush();
 	stallData[m_shader->get_sid()][(*iter)->get_warp_id()][control][1]=1;
-	//cout<<"warp "<<warp_id<<"control "<<(*iter)->get_pc_present()<<"\n";
       }
       if (warp_inst_issued) {
         SCHED_DPRINTF(
@@ -1539,7 +1511,7 @@ void scheduler_unit::cycle() {
         m_stats->dual_issue_nums[m_id]++;
       else
         abort();  // issued should be > 0
-
+	
       break;
     }
   }
@@ -4216,7 +4188,6 @@ void opndcoll_rfu_t::dispatch_ready_cu() {
   max_oc_disp=m_dispatch_units.size();
   for (unsigned p = 0; p < m_dispatch_units.size(); ++p) {
     dispatch_unit_t &du = m_dispatch_units[p];
-    //cout<<"du no "<<p<<" can dispatch "<<du.find_ready()<<"\n";
   }
   for (unsigned p = 0; p < m_dispatch_units.size(); ++p) {
     dispatch_unit_t &du = m_dispatch_units[p];
@@ -4224,7 +4195,6 @@ void opndcoll_rfu_t::dispatch_ready_cu() {
     if(!cu)
 	    ocempty_c=ocempty_c+1;
     if (cu) {
-	    //cout<<"I am dispat\n";
 	    act_warp[cu->get_warp_id()]=1;
       for (unsigned i = 0; i < (cu->get_num_operands() - cu->get_num_regs());
            i++) {
@@ -4261,27 +4231,21 @@ void opndcoll_rfu_t::allocate_cu(unsigned port_num) {
       for (unsigned j = 0; j < inp.m_cu_sets.size(); j++) {
         std::vector<collector_unit_t> &cu_set = m_cus[inp.m_cu_sets[j]];
         bool allocated = false;
-	//for (unsigned k = 0; k < cu_set.size(); k++) {
-		//cout<<"cu no "<<k<<" is free "<<cu_set[k].is_free()<<"\n";
-	//}
         for (unsigned k = 0; k < cu_set.size(); k++) {
           if (cu_set[k].is_free()) {
             collector_unit_t *cu = &cu_set[k];
             allocated = cu->allocate(inp.m_in[i], inp.m_out[i]);
             m_arbiter.add_read_requests(cu);
-	    //cout<<"allocated "<<cu->get_warp_id()<<" did "<<allocated<<"\n";
 	    p1=2;
             break;
           }
         }
         if (allocated) break;  // cu has been allocated, no need to search more.
       }
-      //cout<<"NONE FOUND\n";
       break;  // can only service a single input, if it failed it will fail for
               // others.
     }
   }
-  //cout<<"alloc_result "<<p1<<"\n";
 }
 
 void opndcoll_rfu_t::allocate_reads() {
@@ -4371,7 +4335,6 @@ bool opndcoll_rfu_t::collector_unit_t::allocate(register_set *pipeline_reg_set,
   warp_inst_t **pipeline_reg = pipeline_reg_set->get_ready();
   if ((pipeline_reg) and !((*pipeline_reg)->empty())) {
     m_warp_id = (*pipeline_reg)->warp_id();
-    //cout<<"Inside allocate "<<m_warp_id<<"\n";
     for (unsigned op = 0; op < MAX_REG_OPERANDS; op++) {
       int reg_num =
           (*pipeline_reg)
@@ -4387,10 +4350,8 @@ bool opndcoll_rfu_t::collector_unit_t::allocate(register_set *pipeline_reg_set,
     }
     // move_warp(m_warp,*pipeline_reg);
     pipeline_reg_set->move_out_to(m_warp);
-    //cout<<"One allocated\n";
     return true;
   }
-  //cout<<"None allocate\n";
   return false;
 }
 

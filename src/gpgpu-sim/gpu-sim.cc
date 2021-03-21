@@ -1917,6 +1917,7 @@ void gpgpu_sim::cycle() {
     max_oc_disp=0;
     oc_disp=0;
     max_sid=0;
+
     if (g_interactive_debugger_enabled) gpgpu_debug();
 
       // McPAT main cycle (interface with McPAT)
