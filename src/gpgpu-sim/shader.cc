@@ -1193,14 +1193,16 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   
   // We check control with whatever was in the buffer, otherwise
   // pc will not differ
-  warp_inst_t *pIControl = NULL;
+  warp_inst_t *pISave = NULL;
   unsigned pc, rpc;
   bool buffer_inst_good = false;
   bool valid = true;
 
   if (!warp(warp_id).ibuffer_empty())
   {
-    pIControl = (warp_inst_t*) warp(warp_id).ibuffer_next_inst();
+    const warp_inst_t * pIControl = (warp_inst_t*) warp(warp_id).ibuffer_next_inst();
+    pISave = (warp_inst_t *) pIControl;
+
     valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
@@ -1220,16 +1222,9 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   // For stall purposes we get the next instruction even if 
   // if the ibuffer is empty. But we do not modify the state of the warp
-  const warp_inst_t *pI;
-  if (buffer_inst_good)
-  {
-    pI = pIControl;
-  }
-  else
-  {
-    pc = warp(warp_id).get_pc();
-    m_shader->get_next_inst(warp_id, pc);
-  }
+  pc = warp(warp_id).get_pc();
+  const warp_inst_t *pI = buffer_inst_good ?
+                          (const warp_inst_t *) pISave : m_shader->get_next_inst(warp_id, pc);
 
   if (pI && pI->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
     assert(warp(warp_id).m_cdp_dummy);
