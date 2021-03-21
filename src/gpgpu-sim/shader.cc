@@ -1157,17 +1157,16 @@ void scheduler_unit::order_by_priority(
   }
 }
 
-void scheduler_unit::verify_stall(int i, exec_unit_type_t type) {
+void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   // Don't consider warps that are not yet valid
-  if (m_warp[i] == NULL || m_warp[i]->done_exit()) {
+  if (warp(warp_id) == NULL || warp(warp_id).done_exit()) {
     stallData[m_shader->get_sid()][warp_id][idlew]=1;
   }
   
-  unsigned warp_id = i;
   exec_unit_type_t previous_issued_inst_exec_type = type;
   bool diff_exec_units =
       m_shader->m_config
-          ->gpgpu_dual_issue_diff_exec_ units;
+          ->gpgpu_dual_issue_diff_exec_units;
                                                 
   if (warp(warp_id).waiting())
   {
@@ -1184,7 +1183,7 @@ void scheduler_unit::verify_stall(int i, exec_unit_type_t type) {
   warp_inst_t *pIControl = NULL;
   if (!warp(warp_id).ibuffer_empty())
   {
-    const warp_inst_t pIControl = warp(warp_id).ibuffer_next_inst();
+    const warp_inst_t* pIControl = warp(warp_id).ibuffer_next_inst();
     bool valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
@@ -1199,12 +1198,14 @@ void scheduler_unit::verify_stall(int i, exec_unit_type_t type) {
 
   // For stall purposes we get the next instruction even if 
   // if the ibuffer is empty. But we do not modify the state of the warp
+  const warp_inst_t *pI = m_shader->get_next_inst(warp_id, pc);
+  unsigned pc, rpc;
+  
   m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
-  const warp_inst_t *pI = get_next_inst(warp_id, pc);
 
   if (pI && pI->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
     assert(warp(warp_id).m_cdp_dummy);
-    break;
+    return;
   }
 
   bool warp_inst_issued = false;
@@ -1218,8 +1219,6 @@ void scheduler_unit::verify_stall(int i, exec_unit_type_t type) {
       if(m_scoreboard->checkCollisionMem(warp_id, pI) ){
         stallData[m_shader->get_sid()][warp_id][mem_data]=1;
       }
-
-        ready_inst = true;
 
         const active_mask_t &active_mask =
             m_shader->get_active_mask(warp_id, pI);
@@ -1280,7 +1279,7 @@ void scheduler_unit::verify_stall(int i, exec_unit_type_t type) {
 
             if (execute_on_INT || execute_on_SP) {
               if (pI->m_is_cdp && !warp(warp_id).m_cdp_dummy) {
-                if (pI->m_is_cdp != 1) { break; }
+                if (pI->m_is_cdp != 1) { return; }
               }
             }
             else
