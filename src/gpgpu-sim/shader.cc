@@ -1183,14 +1183,15 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   warp_inst_t *pIControl = NULL;
   unsigned pc, rpc;
   bool buffer_inst_good = false;
+  bool valid = true;
 
   if (!warp(warp_id).ibuffer_empty())
   {
     const warp_inst_t* pIControl = warp(warp_id).ibuffer_next_inst();
-    bool valid = warp(warp_id).ibuffer_next_valid();
+    valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
-      m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
+      m_shader->get_pdom_stack_top_info(warp_id, pIControl, &pc, &rpc);
       if (pc != pIControl->pc) {
         stallData[m_shader->get_sid()][warp_id][control]=1;
       }
@@ -1213,7 +1214,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   }
   else
   {
-    pc = m_warp[warp_id]->get_pc();
+    pc = warp(warp_id).get_pc();
     m_shader->get_next_inst(warp_id, pc);
     m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
   }
@@ -1224,8 +1225,6 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   }
 
   bool warp_inst_issued = false;
-  unsigned pc, rpc;
-
   if (pI) {
       if(m_scoreboard->checkCollisionComp(warp_id, pI)){
         stallData[m_shader->get_sid()][warp_id][comp_data]=1;
