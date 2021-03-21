@@ -1383,8 +1383,6 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
     if ((*iter)->done_exit()) {
       if ((*iter)->get_warp_id() <= 300)
         stallData[m_shader->get_sid()][(*iter)->get_warp_id()][idlew]=1;
-      else
-        cout << "WOW" << (*iter)->get_warp_id() << endl;
       continue;
     }
     act_warp[(*iter)->get_warp_id()] += 1;
