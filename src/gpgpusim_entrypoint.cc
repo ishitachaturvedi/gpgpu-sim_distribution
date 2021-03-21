@@ -49,7 +49,7 @@ using std::vector;
 int cycle_num;
 vector<vector<vector<int>>>stallData;
 vector<int>act_warp;
-int numstall;
+int numstall = 9;
 int max_active;
 int max_warps_act;
 int max_oc_avail;
@@ -103,9 +103,9 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
     // Per Warp
     vector<vector<int>>(100,
       // Per Stall
-      vector<int>(numstall,0)));
+      vector<int>(numstall,-1)));
   act_warp.resize(200,0);
-  warpDispatch.resize(200,0);
+  warpDispatch.resize(200,-1);
   nDispatch.resize(200,0);
 
   // concurrent kernel execution simulation thread
