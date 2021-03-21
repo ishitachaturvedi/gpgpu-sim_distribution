@@ -49,7 +49,7 @@ using std::vector;
 int cycle_num;
 vector<vector<vector<int>>>stallData;
 vector<int>act_warp;
-int numstall = 9;
+int numstall = 10;
 int max_active;
 int max_warps_act;
 int max_oc_avail;
