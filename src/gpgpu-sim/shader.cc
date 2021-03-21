@@ -1200,7 +1200,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   if (!warp(warp_id).ibuffer_empty())
   {
-    pIControl = warp(warp_id).ibuffer_next_inst();
+    pIControl = (warp_inst_t*) warp(warp_id).ibuffer_next_inst();
     valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
