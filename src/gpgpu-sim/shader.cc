@@ -898,14 +898,14 @@ void shader_core_ctx::fetch() {
     // If warp is done and just waiting for pending writes,
     // it is not an imiss
     if (m_warp[i]->hardware_done() &&
-        m_scoreboard->pendingWrites(warp_id) &&
+        m_scoreboard->pendingWrites(i) &&
         !m_warp[i]->done_exit()) {
       stallData[m_sid][i][pendingWritew]=1;
     }
 
-    if (m_warp[warp_id]->hardware_done() &&
-            !m_scoreboard->pendingWrites(warp_id) &&
-            !m_warp[warp_id]->done_exit()) {
+    if (m_warp[i]->hardware_done() &&
+            !m_scoreboard->pendingWrites(i) &&
+            !m_warp[i]->done_exit()) {
       act_warp[i] += 1;
     }
   }
@@ -1159,7 +1159,7 @@ void scheduler_unit::order_by_priority(
 
 void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   // Don't consider warps that are not yet valid
-  if (warp(warp_id) == NULL || warp(warp_id).done_exit()) {
+  if (((*m_warp)[warp_id]) == NULL || warp(warp_id).done_exit()) {
     stallData[m_shader->get_sid()][warp_id][idlew]=1;
   }
   
