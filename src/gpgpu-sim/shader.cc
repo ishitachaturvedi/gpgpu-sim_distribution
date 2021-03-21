@@ -1378,6 +1378,9 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
   for (std::vector<shd_warp_t *>::const_iterator iter =
       m_next_cycle_prioritized_warps.begin();
       iter != m_next_cycle_prioritized_warps.end(); iter++) {
+    if ((*iter) == NULL) {
+      continue;
+    }
     act_warp[(*iter)->get_warp_id()] += 1;
     verify_stall((*iter)->get_warp_id(), exec_unit_type_t::NONE);
   }
