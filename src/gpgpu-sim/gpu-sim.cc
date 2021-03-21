@@ -1860,12 +1860,6 @@ void gpgpu_sim::cycle() {
 
     /*------Printing colllected stats---------*/
     max_active=actw+1;
-    if(ocfull_c>0)
-	    ocfull++;
-    if(ocempty_c>0)
-	    ocempty++;
-    ocfull_c=0;
-    ocempty_c=0;
     if(max_warps_act<max_active)
 	    max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
@@ -1878,8 +1872,6 @@ void gpgpu_sim::cycle() {
 	    act_warp[i]=0;
     }
     cout<<"Warps active "<<max_active<<"\n";
-    cout<<"ocempty "<<ocempty<<"\n";
-    cout<<"ocfull "<<ocfull<<"\n";
     cout<<"\n";
     cout<<"max shader "<<max_sid<<"\n";
 

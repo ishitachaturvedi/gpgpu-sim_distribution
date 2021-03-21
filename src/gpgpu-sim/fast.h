@@ -21,12 +21,6 @@ typedef enum {
     idlew
 } StallReasons;
 
-extern int ocfull; //no OC to allocate
-extern int ocempty; //no OC to dispatch
-
-extern int ocfull_c; //no OC to allocate
-extern int ocempty_c; //no OC to dispatch
-
 //max number of warps active
 extern int max_active;
 extern int max_warps_act;
