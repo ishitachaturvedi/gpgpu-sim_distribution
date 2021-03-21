@@ -99,14 +99,14 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   atexit(termination_callback);
   
   // Per Shader
-  stallData.resize(200,
+  stallData.resize(500,
     // Per Warp
-    vector<vector<int>>(100,
+    vector<vector<int>>(300,
       // Per Stall
-      vector<int>(numstall,-1)));
-  act_warp.resize(200,0);
-  warpDispatch.resize(200,-1);
-  nDispatch.resize(200,0);
+      vector<int>(numstall,0)));
+  act_warp.resize(500,0);
+  warpDispatch.resize(500,0);
+  nDispatch.resize(500,0);
 
   // concurrent kernel execution simulation thread
   do {

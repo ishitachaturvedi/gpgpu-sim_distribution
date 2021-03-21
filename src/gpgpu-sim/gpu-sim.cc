@@ -1884,13 +1884,13 @@ void gpgpu_sim::cycle() {
         for(int j=0;j<numstall;j++)
         {
           cout<<stallData[k][i][j]<< " ; ";
-          stallData[k][i][j]=-1;
+          stallData[k][i][j]=0;
         }
         cout<<"\n";
       }
       cout<<"warp dispatches "<<warpDispatch[k]<<"\n";
       cout<<"#inst dispatched "<<nDispatch[k]<<"\n";
-      warpDispatch[k] = -1;
+      warpDispatch[k] = 0;
       nDispatch[k] = 0;
       cout<<"****************\n";
     }

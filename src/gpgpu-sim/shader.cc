@@ -1229,7 +1229,6 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   {
     pc = warp(warp_id).get_pc();
     m_shader->get_next_inst(warp_id, pc);
-    m_shader->get_pdom_stack_top_info(warp_id, pI, &pc, &rpc);
   }
 
   if (pI && pI->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
@@ -1378,7 +1377,13 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
   for (std::vector<shd_warp_t *>::const_iterator iter =
       m_next_cycle_prioritized_warps.begin();
       iter != m_next_cycle_prioritized_warps.end(); iter++) {
-    if ((*iter) == NULL || (*iter)->done_exit()) {
+    if ((*iter) == NULL) {
+      continue;
+    }
+    if ((*iter)->done_exit())
+    {
+      if ((*iter)->get_warp_id() >= 0)
+        stallData[m_shader->get_sid()][warp_id][idlew]=1;
       continue;
     }
     act_warp[(*iter)->get_warp_id()] += 1;
