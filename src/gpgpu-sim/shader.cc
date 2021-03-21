@@ -1378,7 +1378,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
   for (std::vector<shd_warp_t *>::const_iterator iter =
       m_next_cycle_prioritized_warps.begin();
       iter != m_next_cycle_prioritized_warps.end(); iter++) {
-    if ((*iter) == NULL) {
+    if ((*iter) == NULL || (*iter)->done_exit()) {
       continue;
     }
     act_warp[(*iter)->get_warp_id()] += 1;
