@@ -907,7 +907,7 @@ void shader_core_ctx::fetch() {
     if (m_warp[warp_id]->hardware_done() &&
             !m_scoreboard->pendingWrites(warp_id) &&
             !m_warp[warp_id]->done_exit()) {
-      act_warp[i] = 1;
+      act_warp[i] += 1;
     }
   }
 
@@ -1357,6 +1357,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
   for (std::vector<shd_warp_t *>::const_iterator iter =
       m_next_cycle_prioritized_warps.begin();
       iter != m_next_cycle_prioritized_warps.end(); iter++) {
+    act_warp[(*iter)->get_warp_id()] += 1;
     verify_stall((*iter)->get_warp_id(), exec_unit_type_t::NONE);
   }
 
@@ -1642,6 +1643,9 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
         m_stats->dual_issue_nums[m_id]++;
       else
         abort();  // issued should be > 0
+
+      warpDispatch[m_shader->get_sid()] = warp_id;
+      nDispatch[m_shader->get_sid()] += issued;
 
       break;
     }

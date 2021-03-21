@@ -1882,17 +1882,6 @@ void gpgpu_sim::cycle() {
     cout<<"ocfull "<<ocfull<<"\n";
     cout<<"\n";
     cout<<"max shader "<<max_sid<<"\n";
-    /*for(int i=0;i<max_active;i++)
-    {
-      cout<<"warp "<<i<<" ";
-      for(int j=0;j<numstall;j++)
-      {
-        cout<<stallData[i][j][0]<<" : "<<stallData[i][j][1]<< " ; ";
-        stallData[i][j][0]=-1; //reset after printing
-        stallData[i][j][1]=-1;
-      }
-      cout<<"\n";
-    }*/
 
     for(int k=0;k<max_sid;k++)
     {
@@ -1907,6 +1896,10 @@ void gpgpu_sim::cycle() {
         }
         cout<<"\n";
       }
+      cout<<"warp dispatches "<<warpDispatch[k]<<"\n";
+      cout<<"#inst dispatched "<<nDispatch[k]<<"\n";
+      warpDispatch[k] = -1;
+      nDispatch[k] = 0;
       cout<<"****************\n";
     }
 
