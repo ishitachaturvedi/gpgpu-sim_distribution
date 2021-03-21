@@ -1204,24 +1204,29 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     const warp_inst_t * pIControl = (warp_inst_t*) warp(warp_id).ibuffer_next_inst();
     pISave = (warp_inst_t *) pIControl;
 
-    if (pIControl && pIControl->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
-      return;
-    }
+    if (!pIControl->empty()) {
+      if (pIControl && pIControl->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
+        return;
+      }
 
-    valid = warp(warp_id).ibuffer_next_valid();
+      valid = warp(warp_id).ibuffer_next_valid();
 
-    if (pIControl) {
-      m_shader->get_pdom_stack_top_info(warp_id, pIControl, &pc, &rpc);
-      if (pc != pIControl->pc) {
+      if (pIControl) {
+        m_shader->get_pdom_stack_top_info(warp_id, pIControl, &pc, &rpc);
+        if (pc != pIControl->pc) {
+          stallData[m_shader->get_sid()][warp_id][control]=1;
+          pc = pIControl->pc;
+        }
+        else
+        {
+          buffer_inst_good = true;
+        }
+      }
+      else if (valid) {
         stallData[m_shader->get_sid()][warp_id][control]=1;
-        pc = pIControl->pc;
-      }
-      else
-      {
-        buffer_inst_good = true;
       }
     }
-    else if (valid) {
+    else {
       stallData[m_shader->get_sid()][warp_id][control]=1;
     }
   }     
@@ -1244,8 +1249,6 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
       if(m_scoreboard->checkCollisionMem(warp_id, pI) ){
         stallData[m_shader->get_sid()][warp_id][mem_data]=1;
       }
-
-      const active_mask_t &active_mask = m_shader->get_active_mask(warp_id, pI);
 
       if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
           (pI->op == MEMORY_BARRIER_OP) ||
