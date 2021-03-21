@@ -1194,7 +1194,8 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   // We check control with whatever was in the buffer, otherwise
   // pc will not differ
   warp_inst_t *pISave = NULL;
-  unsigned pc, rpc;
+  unsigned pc = warp(warp_id).get_pc();
+  unsigned rpc;
   bool buffer_inst_good = false;
   bool valid = true;
 
@@ -1203,12 +1204,17 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     const warp_inst_t * pIControl = (warp_inst_t*) warp(warp_id).ibuffer_next_inst();
     pISave = (warp_inst_t *) pIControl;
 
+    if (pIControl && pIControl->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
+      return;
+    }
+
     valid = warp(warp_id).ibuffer_next_valid();
 
     if (pIControl) {
       m_shader->get_pdom_stack_top_info(warp_id, pIControl, &pc, &rpc);
       if (pc != pIControl->pc) {
         stallData[m_shader->get_sid()][warp_id][control]=1;
+        pc = pIControl->pc;
       }
       else
       {
@@ -1222,17 +1228,15 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   // For stall purposes we get the next instruction even if 
   // if the ibuffer is empty. But we do not modify the state of the warp
-  pc = warp(warp_id).get_pc();
   const warp_inst_t *pI = buffer_inst_good ?
                           (const warp_inst_t *) pISave : m_shader->get_next_inst(warp_id, pc);
 
   if (pI && pI->m_is_cdp && warp(warp_id).m_cdp_latency > 0) {
-    assert(warp(warp_id).m_cdp_dummy);
     return;
   }
 
   bool warp_inst_issued = false;
-  if (pI) {
+  if (pI && !pI->empty()) {
       if(m_scoreboard->checkCollisionComp(warp_id, pI)){
         stallData[m_shader->get_sid()][warp_id][comp_data]=1;
       }
@@ -1351,7 +1355,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
         }
       }
     }
-    else if (valid) {
+    else {
       // this case can happen after a return instruction in diverged warp
       stallData[m_shader->get_sid()][warp_id][control]=1;
     }
