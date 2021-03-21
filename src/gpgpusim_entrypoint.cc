@@ -98,7 +98,7 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
   // Per Shader
   stallData.resize(200,
     // Per Warp
-    vector<int>(100,
+    vector<vector<int>>(100,
       // Per Stall
       vector<int>(numstall,0)));
   act_warp.resize(200,0);
