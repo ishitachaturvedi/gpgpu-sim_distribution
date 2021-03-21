@@ -2080,9 +2080,6 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     // when mf returns
     inst.accessq_pop_back();
   }
-  if (!inst.accessq_empty() && result == NO_RC_FAIL){ result = COAL_STALL;
-    llData[m_sid][inst.warp_id()][mem_data][0]=inst.pc;
-  }
   return result;
 }
 
