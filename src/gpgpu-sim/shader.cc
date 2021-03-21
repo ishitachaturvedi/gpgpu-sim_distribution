@@ -858,7 +858,6 @@ void shader_core_ctx::decode() {
   if (m_inst_fetch_buffer.m_valid) {
     // decode 1 or 2 instructions and place them into ibuffer
     address_type pc = m_inst_fetch_buffer.m_pc;
-    act_warp[m_inst_fetch_buffer.m_warp_id]=1;
     const warp_inst_t *pI1 = get_next_inst(m_inst_fetch_buffer.m_warp_id, pc);
     m_warp[m_inst_fetch_buffer.m_warp_id]->ibuffer_fill(0, pI1);
     m_warp[m_inst_fetch_buffer.m_warp_id]->inc_inst_in_pipeline();
@@ -963,7 +962,6 @@ void shader_core_ctx::fetch() {
         if (!m_warp[warp_id]->functional_done() &&
             !m_warp[warp_id]->imiss_pending() &&
             m_warp[warp_id]->ibuffer_empty()) {
-		      act_warp[warp_id]=1;
           address_type pc;
           pc = m_warp[warp_id]->get_pc();
           address_type ppc = pc + PROGRAM_MEM_START;
@@ -1026,7 +1024,6 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
   warp_inst_t **pipe_reg =
       pipe_reg_set.get_free(m_config->sub_core_model, sch_id);
   assert(pipe_reg);
-  act_warp[warp_id]=1;
   //cout<<"issued warp "<<warp_id<<" TB "<<m_warp[warp_id]->get_cta_id()<<"\n";
   m_warp[warp_id]->ibuffer_free();
   assert(next_inst->valid());
@@ -1645,6 +1642,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
         abort();  // issued should be > 0
 
       warpDispatch[m_shader->get_sid()] = warp_id;
+      act_warp[m_shader->get_sid()] += get_sid() * 10; // Register that warp dispatched
       nDispatch[m_shader->get_sid()] += issued;
 
       break;
@@ -1949,10 +1947,6 @@ void shader_core_ctx::warp_inst_complete(const warp_inst_t &inst) {
       printf("[warp_inst_complete] uid=%u core=%u warp=%u pc=%#x @ time=%llu \n",
              inst.get_uid(), m_sid, inst.warp_id(), inst.pc,  m_gpu->gpu_tot_sim_cycle +  m_gpu->gpu_sim_cycle);
 #endif
-  if(!inst.empty())
-  {
-    act_warp[inst.warp_id()]=1;
-  }
   if (inst.op_pipe == SP__OP) 
 	  m_stats->m_num_sp_committed[m_sid]++;
   else if (inst.op_pipe == SFU__OP)
@@ -2004,7 +1998,6 @@ void shader_core_ctx::writeback() {
 
     m_operand_collector.writeback(*pipe_reg);
     unsigned warp_id = pipe_reg->warp_id();
-    act_warp[warp_id]=1;
     m_scoreboard->releaseRegisters(pipe_reg);
     m_scoreboard->releaseRegistersMem(pipe_reg);
     m_scoreboard->releaseRegistersComp(pipe_reg);
@@ -2044,7 +2037,6 @@ mem_stage_stall_type ldst_unit::process_cache_access(
     enum cache_request_status status) {
   mem_stage_stall_type result = NO_RC_FAIL;
   if (!inst.empty()) {
-    act_warp[inst.warp_id()]=1;
     if(m_sid>max_sid)
         max_sid=m_sid;
   }
@@ -2108,7 +2100,6 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
   mem_stage_stall_type result = NO_RC_FAIL;
   if(!inst.empty())
   {
-	  act_warp[inst.warp_id()]=1;
 	  if(m_sid>max_sid)
         	max_sid=m_sid;
   }
@@ -2173,7 +2164,6 @@ void ldst_unit::L1_latency_queue_cycle() {
   for (int j = 0; j < m_config->m_L1D_config.l1_banks; j++) {
     if ((l1_latency_queue[j][0]) != NULL) {
       mem_fetch *mf_next = l1_latency_queue[j][0];
-      act_warp[mf_next->get_inst().warp_id()]=1;
       std::list<cache_event> events;
       enum cache_request_status status =
           m_L1D->access(mf_next->get_addr(), mf_next,
@@ -2243,7 +2233,6 @@ bool ldst_unit::constant_cycle(warp_inst_t &inst, mem_stage_stall_type &rc_fail,
                                mem_stage_access_type &fail_type) {
 	if(!inst.empty())
 	{
-		act_warp[inst.warp_id()]=1;
 		if(m_sid>max_sid)
         		max_sid=m_sid;
 	}
@@ -2293,7 +2282,6 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
                              mem_stage_access_type &access_type) {
 	if(!inst.empty())
 	{
-		act_warp[inst.warp_id()]=1;
 		if(m_sid>max_sid)
         		max_sid=m_sid;
 	}
@@ -2692,7 +2680,6 @@ void ldst_unit::issue(register_set &reg_set) {
 void ldst_unit::writeback() {
   // process next instruction that is going to writeback
   if (!m_next_wb.empty()) {
-	  act_warp[m_next_wb.warp_id()]=1;
     if (m_operand_collector->writeback(m_next_wb)) {
       bool insn_completed = false;
       for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
@@ -2747,14 +2734,12 @@ void ldst_unit::writeback() {
           m_core->dec_inst_in_pipeline(m_pipeline_reg[0]->warp_id());
           m_pipeline_reg[0]->clear();
           serviced_client = next_client;
-	  act_warp[m_next_wb.warp_id()]=1;
         }
         break;
       case 1:  // texture response
         if (m_L1T->access_ready()) {
           mem_fetch *mf = m_L1T->next_access();
           m_next_wb = mf->get_inst();
-	  act_warp[mf->get_wid()]=1;
           delete mf;
           serviced_client = next_client;
         }
@@ -2763,7 +2748,6 @@ void ldst_unit::writeback() {
         if (m_L1C->access_ready()) {
           mem_fetch *mf = m_L1C->next_access();
           m_next_wb = mf->get_inst();
-	  act_warp[mf->get_wid()]=1;
           delete mf;
           serviced_client = next_client;
         }
@@ -2771,7 +2755,6 @@ void ldst_unit::writeback() {
       case 3:  // global/local
         if (m_next_global) {
           m_next_wb = m_next_global->get_inst();
-	  act_warp[m_next_global->get_wid()]=1;
           if (m_next_global->isatomic()) {
             m_core->decrement_atomic_count(
                 m_next_global->get_wid(),
@@ -2786,7 +2769,6 @@ void ldst_unit::writeback() {
         if (m_L1D && m_L1D->access_ready()) {
           mem_fetch *mf = m_L1D->next_access();
           m_next_wb = mf->get_inst();
-	  act_warp[mf->get_wid()]=1;
           delete mf;
           serviced_client = next_client;
         }
@@ -2842,7 +2824,6 @@ void ldst_unit::cycle() {
 
   if (!m_response_fifo.empty()) {
     mem_fetch *mf = m_response_fifo.front();
-    act_warp[mf->get_wid()]=1;
     if (mf->get_access_type() == TEXTURE_ACC_R) {
       if (m_L1T->fill_port_free()) {
         m_L1T->fill(mf, m_core->get_gpu()->gpu_sim_cycle +
@@ -2921,7 +2902,6 @@ void ldst_unit::cycle() {
 
   if (!pipe_reg.empty()) {
     unsigned warp_id = pipe_reg.warp_id();
-    act_warp[warp_id]=1;
     if (pipe_reg.is_load()) {
       if (pipe_reg.space.get_type() == shared_space) {
         if (m_pipeline_reg[m_config->smem_latency - 1]->empty()) {
@@ -3818,7 +3798,6 @@ void barrier_set_t::deallocate_barrier(unsigned cta_id) {
 // individual warp hits barrier
 void barrier_set_t::warp_reaches_barrier(unsigned cta_id, unsigned warp_id,
                                          warp_inst_t *inst) {
-	act_warp[warp_id]=1;
   barrier_type bar_type = inst->bar_type;
   unsigned bar_id = inst->bar_id;
   unsigned bar_count = inst->bar_count;
@@ -3870,7 +3849,6 @@ void barrier_set_t::warp_exit(unsigned warp_id) {
   // caller needs to verify all threads in warp are done, e.g., by checking PDOM
   // stack to see it has only one entry during exit_impl()
   m_warp_active.reset(warp_id);
-  act_warp[warp_id]=1;
   // test for barrier release
   cta_to_warp_t::iterator w = m_cta_to_warps.begin();
   for (; w != m_cta_to_warps.end(); ++w) {
@@ -3918,7 +3896,6 @@ void barrier_set_t::dump() {
 }
 
 void shader_core_ctx::warp_exit(unsigned warp_id) {
-	act_warp[warp_id]=1;
 	bool done = true;
   for (unsigned i = warp_id * get_config()->warp_size;
        i < (warp_id + 1) * get_config()->warp_size; i++) {
@@ -4185,10 +4162,6 @@ int register_bank(int regnum, int wid, unsigned num_banks,
 
 bool opndcoll_rfu_t::writeback(warp_inst_t &inst) {
   assert(!inst.empty());
-  if(!inst.empty())
-  {
-	  act_warp[inst.warp_id()]=1;
-  }
   std::list<unsigned> regs = m_shader->get_regs_written(inst);
   for (unsigned op = 0; op < MAX_REG_OPERANDS; op++) {
     int reg_num = inst.arch_reg.dst[op];  // this math needs to match that used
@@ -4242,8 +4215,6 @@ void opndcoll_rfu_t::dispatch_ready_cu() {
     if(!cu)
 	    ocempty_c=ocempty_c+1;
     if (cu) {
-	    //cout<<"I am dispat\n";
-	    act_warp[cu->get_warp_id()]=1;
       for (unsigned i = 0; i < (cu->get_num_operands() - cu->get_num_regs());
            i++) {
         if (m_shader->get_config()->gpgpu_clock_gated_reg_file) {
@@ -4311,7 +4282,6 @@ void opndcoll_rfu_t::allocate_reads() {
     const op_t &rr = *r;
     unsigned reg = rr.get_reg();
     unsigned wid = rr.get_wid();
-    act_warp[wid]=1;
     unsigned bank =
         register_bank(reg, wid, m_num_banks, m_bank_warp_shift, sub_core_model,
                       m_num_banks_per_sched, rr.get_sid());
@@ -4322,7 +4292,6 @@ void opndcoll_rfu_t::allocate_reads() {
   for (r = read_ops.begin(); r != read_ops.end(); ++r) {
     op_t &op = r->second;
     unsigned cu = op.get_oc_id();
-    act_warp[op.get_wid()]=1;
     unsigned operand = op.get_operand();
     m_cu[cu]->collect_operand(operand);
     if (m_shader->get_config()->gpgpu_clock_gated_reg_file) {
