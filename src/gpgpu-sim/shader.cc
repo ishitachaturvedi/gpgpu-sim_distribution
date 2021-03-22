@@ -1158,7 +1158,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   }
 
   // Maybe warp is done and just waiting for pending writes
-  if (warp(warp_id)->hardware_done()) {
+  if (warp(warp_id).hardware_done()) {
     if (m_scoreboard->pendingWrites(warp_id))
       stallData[m_shader->get_sid()][warp_id][pendingWritew]=1;
     else
@@ -1183,7 +1183,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     stallData[m_shader->get_sid()][warp_id][ibufferw]=1;
   }
 
-  if (m_warp[i]->imiss_pending())
+  if (warp(warp_id).imiss_pending())
   {
     stallData[m_shader->get_sid()][warp_id][imisspendingw]=1;
   }
