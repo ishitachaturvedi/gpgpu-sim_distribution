@@ -1166,7 +1166,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     return;
   }
 
-  act_warp[m_shader->get_sid()][warp_id] = get_schd_id();
+  act_warp[m_shader->get_sid()][warp_id] = get_schd_id() + 1;
   
   exec_unit_type_t previous_issued_inst_exec_type = type;
   bool diff_exec_units =
@@ -1233,7 +1233,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   }
 
   bool warp_inst_issued = false;
-  if (pI && !pI->empty()) {
+  if (pI) {
     if(m_scoreboard->checkCollisionComp(warp_id, pI)){
       stallData[m_shader->get_sid()][warp_id][comp_data]=1;
     }

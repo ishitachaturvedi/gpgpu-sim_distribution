@@ -1874,7 +1874,6 @@ void gpgpu_sim::cycle() {
       for(int i=0;i<max_active;i++)
       {
         cout<<act_warp[k][i]<<" ";
-        act_warp[k][i]=0;
       }
 
       for(int s=0; s<num_of_schedulers; s++)
@@ -1882,7 +1881,7 @@ void gpgpu_sim::cycle() {
         cout<<"SCHEDULER " << s << "\n";
         for(int i=0;i<max_active;i++)
         {
-          if (act_warp[k][i] == s)
+          if (act_warp[k][i] == (s+1))
           {
             cout<<"warp "<<i<<" ";
             for(int j=0;j<numstall;j++)
@@ -1897,6 +1896,11 @@ void gpgpu_sim::cycle() {
         cout<<"#inst dispatched "<<nDispatch[k][s]<<"\n";
         warpDispatch[k][s] = 0;
         nDispatch[k][s] = 0;
+      }
+
+      for(int i=0;i<max_active;i++)
+      {
+        act_warp[k][i]=0;
       }
       cout<<"****************\n";
     }
