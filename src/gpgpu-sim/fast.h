@@ -4,7 +4,7 @@ using std::vector;
 extern int cycle_num;
 //initialise vector of vectors as stallData[Warp #][stall #]
 extern vector<vector<vector<int>>>stallData;
-extern vector<int>act_warp;
+extern vector<vector<int>>act_warp;
 
 //types of stalls
 extern int numstall;
@@ -19,5 +19,5 @@ extern int oc_disp;
 extern int max_sid;
 extern int num_of_schedulers;
 
-extern vector<int> nDispatch;
-extern vector<int> warpDispatch;
+extern vector<vector<int>> nDispatch;
+extern vector<vector<int>> warpDispatch;
