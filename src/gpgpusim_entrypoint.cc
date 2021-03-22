@@ -48,7 +48,7 @@ using std::vector;
 
 int cycle_num;
 vector<vector<vector<int>>>stallData;
-vector<int>act_warp;
+vector<vector<int>>act_warp;
 int numstall = 10;
 int max_active;
 int max_warps_act;
@@ -59,8 +59,8 @@ int oc_disp;
 int max_sid;
 int num_of_schedulers;
 
-vector<int> nDispatch;
-vector<int> warpDispatch;
+vector<vector<int>> nDispatch;
+vector<vector<int>> warpDispatch;
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
