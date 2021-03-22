@@ -17,6 +17,7 @@ extern int oc_alloc;
 extern int max_oc_disp;
 extern int oc_disp;
 extern int max_sid;
+extern int num_of_schedulers;
 
 extern vector<int> nDispatch;
 extern vector<int> warpDispatch;

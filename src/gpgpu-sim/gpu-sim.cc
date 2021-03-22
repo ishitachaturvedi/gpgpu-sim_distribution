@@ -1863,35 +1863,41 @@ void gpgpu_sim::cycle() {
     if(max_warps_act<max_active)
 	    max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";
-    cout<<"max_oc "<<max_oc_avail<<" oc_alloc "<<oc_alloc<<"\n";
-    cout<<"max_disp "<<max_oc_disp<<" oc_disp "<<oc_disp<<"\n";
-    cout<<"Active ";
-    for(int i=0;i<max_active;i++)
-    {
-	    cout<<act_warp[i]<<" ";
-	    act_warp[i]=0;
-    }
-    cout<<"Warps active "<<max_active<<"\n";
     cout<<"\n";
     cout<<"max shader "<<max_sid<<"\n";
 
     for(int k=0;k<max_sid;k++)
     {
       cout<<"SID "<<k<<"\n";
+
+      cout<<"Active ";
       for(int i=0;i<max_active;i++)
       {
-        cout<<"warp "<<i<<" ";
-        for(int j=0;j<numstall;j++)
-        {
-          cout<<stallData[k][i][j]<< " ; ";
-          stallData[k][i][j]=0;
-        }
-        cout<<"\n";
+        cout<<act_warp[k][i]<<" ";
+        act_warp[k][i]=0;
       }
-      cout<<"warp dispatches "<<warpDispatch[k]<<"\n";
-      cout<<"#inst dispatched "<<nDispatch[k]<<"\n";
-      warpDispatch[k] = 0;
-      nDispatch[k] = 0;
+
+      for(int s=0; s<num_of_schedulers; s++)
+      {
+        cout<<"SCHEDULER " << s << "\n";
+        for(int i=0;i<max_active;i++)
+        {
+          if (act_warp[k][i] == s)
+          {
+            cout<<"warp "<<i<<" ";
+            for(int j=0;j<numstall;j++)
+            {
+              cout<<stallData[k][i][j]<< " ; ";
+              stallData[k][i][j]=0;
+            }
+            cout<<"\n";
+          }
+        }
+        cout<<"warp dispatches "<<warpDispatch[k][s]<<"\n";
+        cout<<"#inst dispatched "<<nDispatch[k][s]<<"\n";
+        warpDispatch[k][s] = 0;
+        nDispatch[k][s] = 0;
+      }
       cout<<"****************\n";
     }
 

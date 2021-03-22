@@ -902,27 +902,6 @@ void shader_core_ctx::fetch() {
   if(m_sid > max_sid)
 	      max_sid=m_sid;
 
-  // Mark all threads that are waiting on L1I
-  for (unsigned i = 0; i < m_config->max_warps_per_shader; i++) {
-    if (m_warp[i]->imiss_pending() || m_warp[i]->ibuffer_empty()) {
-      stallData[m_sid][i][imisspendingw]=1;
-    }
-
-    // If warp is done and just waiting for pending writes,
-    // it is not an imiss
-    if (m_warp[i]->hardware_done() &&
-        m_scoreboard->pendingWrites(i) &&
-        !m_warp[i]->done_exit()) {
-      stallData[m_sid][i][pendingWritew]=1;
-    }
-
-    if (m_warp[i]->hardware_done() &&
-            !m_scoreboard->pendingWrites(i) &&
-            !m_warp[i]->done_exit()) {
-      act_warp[i] += 1;
-    }
-  }
-
   if (!m_inst_fetch_buffer.m_valid) {
     if (m_L1I->access_ready()) {
       mem_fetch *mf = m_L1I->next_access();
@@ -1070,6 +1049,7 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
 void shader_core_ctx::issue() {
   // Ensure fair round robin issu between schedulers
   unsigned j;
+  num_of_schedulers =  schedulers.size();
   for (unsigned i = 0; i < schedulers.size(); i++) {
     j = (Issue_Prio + i) % schedulers.size();
     schedulers[j]->cycle();
@@ -1176,6 +1156,17 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     stallData[m_shader->get_sid()][warp_id][idlew]=1;
     return;
   }
+
+  // Maybe warp is done and just waiting for pending writes
+  if (warp(warp_id)->hardware_done()) {
+    if (m_scoreboard->pendingWrites(warp_id))
+      stallData[m_shader->get_sid()][warp_id][pendingWritew]=1;
+    else
+      stallData[m_shader->get_sid()][warp_id][idlew]=1;
+    return;
+  }
+
+  act_warp[m_shader->get_sid()][warp_id] = get_schd_id();
   
   exec_unit_type_t previous_issued_inst_exec_type = type;
   bool diff_exec_units =
@@ -1190,6 +1181,11 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
   if (warp(warp_id).ibuffer_empty())
   {
     stallData[m_shader->get_sid()][warp_id][ibufferw]=1;
+  }
+
+  if (m_warp[i]->imiss_pending())
+  {
+    stallData[m_shader->get_sid()][warp_id][imisspendingw]=1;
   }
   
   // We check control with whatever was in the buffer, otherwise
@@ -1383,7 +1379,6 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
         stallData[m_shader->get_sid()][(*iter)->get_warp_id()][idlew]=1;
       continue;
     }
-    act_warp[(*iter)->get_warp_id()] += 1;
     verify_stall((*iter)->get_warp_id(), exec_unit_type_t::NONE);
   }
 
@@ -1670,10 +1665,8 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
       else
         abort();  // issued should be > 0
 
-      warpDispatch[m_shader->get_sid()] = warp_id;
-      act_warp[m_shader->get_sid()] += get_sid() * 10; // Register that warp dispatched
-      nDispatch[m_shader->get_sid()] += issued;
-
+      warpDispatch[m_shader->get_sid()][get_schd_id()] = warp_id;
+      nDispatch[m_shader->get_sid()][get_schd_id()] = issued;
       break;
     }
   }

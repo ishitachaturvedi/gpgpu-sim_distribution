@@ -57,6 +57,7 @@ int oc_alloc;
 int max_oc_disp;
 int oc_disp;
 int max_sid;
+int num_of_schedulers;
 
 vector<int> nDispatch;
 vector<int> warpDispatch;
@@ -104,9 +105,10 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
     vector<vector<int>>(300,
       // Per Stall
       vector<int>(numstall,0)));
-  act_warp.resize(500,0);
-  warpDispatch.resize(500,0);
-  nDispatch.resize(500,0);
+  act_warp.resize(500, vector<int>(300,0) );
+  warpDispatch.resize(500, vector<int>(5 , 0) );
+  nDispatch.resize(500, vector<int>(5 , 0) );
+  num_of_schedulers = 4;
 
   // concurrent kernel execution simulation thread
   do {
