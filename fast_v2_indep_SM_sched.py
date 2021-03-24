@@ -1125,7 +1125,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(twoStall[i][3])/float(twoStall[i][2])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[twoStall[i][0]])+" + "+str(names[twoStall[i][1]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[twoStall[i][0]])+" + "+str(names[twoStall[i][1]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1138,7 +1138,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(threeStall[i][4])/float(threeStall[i][3])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[threeStall[i][0]])+" + "+str(names[threeStall[i][1]])+" + "+str(names[threeStall[i][2]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[threeStall[i][0]])+" + "+str(names[threeStall[i][1]])+" + "+str(names[threeStall[i][2]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1151,7 +1151,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(fourStall[i][5])/float(fourStall[i][4])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[fourStall[i][0]])+" + "+str(names[fourStall[i][1]])+" + "+str(names[fourStall[i][2]])+" + "+str(names[fourStall[i][3]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[fourStall[i][0]])+" + "+str(names[fourStall[i][1]])+" + "+str(names[fourStall[i][2]])+" + "+str(names[fourStall[i][3]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1164,7 +1164,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(fiveStall[i][6])/float(fiveStall[i][5])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[fiveStall[i][0]])+" + "+str(names[fiveStall[i][1]])+" + "+str(names[fiveStall[i][2]])+" + "+str(names[fiveStall[i][3]])+" + "+str(names[fiveStall[i][4]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[fiveStall[i][0]])+" + "+str(names[fiveStall[i][1]])+" + "+str(names[fiveStall[i][2]])+" + "+str(names[fiveStall[i][3]])+" + "+str(names[fiveStall[i][4]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1176,7 +1176,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(sixStall[i][7])/float(sixStall[i][6])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[sixStall[i][0]])+" + "+str(names[sixStall[i][1]])+" + "+str(names[sixStall[i][2]])+" + "+str(names[sixStall[i][3]])+" + "+str(names[sixStall[i][4]])+" + "+str(names[sixStall[i][5]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[sixStall[i][0]])+" + "+str(names[sixStall[i][1]])+" + "+str(names[sixStall[i][2]])+" + "+str(names[sixStall[i][3]])+" + "+str(names[sixStall[i][4]])+" + "+str(names[sixStall[i][5]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1188,7 +1188,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(sevenStall[i][8])/float(sevenStall[i][7])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[sevenStall[i][0]])+" + "+str(names[sevenStall[i][1]])+" + "+str(names[sevenStall[i][2]])+" + "+str(names[sevenStall[i][3]])+" + "+str(names[sevenStall[i][4]])+" + "+str(names[sevenStall[i][5]])+" + "+str(names[sevenStall[i][6]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[sevenStall[i][0]])+" + "+str(names[sevenStall[i][1]])+" + "+str(names[sevenStall[i][2]])+" + "+str(names[sevenStall[i][3]])+" + "+str(names[sevenStall[i][4]])+" + "+str(names[sevenStall[i][5]])+" + "+str(names[sevenStall[i][6]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1200,7 +1200,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(eightStall[i][9])/float(eightStall[i][8])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[eightStall[i][0]])+" + "+str(names[eightStall[i][1]])+" + "+str(names[eightStall[i][2]])+" + "+str(names[eightStall[i][3]])+" + "+str(names[eightStall[i][4]])+" + "+str(names[eightStall[i][5]])+" + "+str(names[eightStall[i][6]])+" + "+str(names[eightStall[i][7]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[eightStall[i][0]])+" + "+str(names[eightStall[i][1]])+" + "+str(names[eightStall[i][2]])+" + "+str(names[eightStall[i][3]])+" + "+str(names[eightStall[i][4]])+" + "+str(names[eightStall[i][5]])+" + "+str(names[eightStall[i][6]])+" + "+str(names[eightStall[i][7]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1212,7 +1212,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(nineStall[i][10])/float(nineStall[i][9])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[nineStall[i][0]])+" + "+str(names[nineStall[i][1]])+" + "+str(names[nineStall[i][2]])+" + "+str(names[nineStall[i][3]])+" + "+str(names[nineStall[i][4]])+" + "+str(names[nineStall[i][5]])+" + "+str(names[nineStall[i][6]])+" + "+str(names[nineStall[i][7]])+" + "+str(names[nineStall[i][8]])+" % speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[nineStall[i][0]])+" + "+str(names[nineStall[i][1]])+" + "+str(names[nineStall[i][2]])+" + "+str(names[nineStall[i][3]])+" + "+str(names[nineStall[i][4]])+" + "+str(names[nineStall[i][5]])+" + "+str(names[nineStall[i][6]])+" + "+str(names[nineStall[i][7]])+" + "+str(names[nineStall[i][8]])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
