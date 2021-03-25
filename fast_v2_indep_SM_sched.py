@@ -13,6 +13,7 @@
 #IDEA: Each SM and each sched of each SM is independent--> speedup on removing a stall type is the minimum speedup among all SMs when the stall is removed
 
 from copy import deepcopy
+from pathlib import Path
 
 #sort function
 def Sort(sub_li,key): 
@@ -841,7 +842,7 @@ def FourStallAdd(warp_four_c,StallList,SM,sched_num):
     id1 = StallList[1]
     id2 = StallList[2]
     id3 = StallList[3]
-    warp_four_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1] = warp_four_c[id0][id1-id0-1][id2-id1-1][id3-id2-1] + 1
+    warp_four_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1] = warp_four_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1] + 1
     return warp_four_c
 
 # Function to add stalls to five stall list
@@ -874,7 +875,7 @@ def SevenStallAdd(warp_seven_c,StallList,SM,sched_num):
     id4 = StallList[4]
     id5 = StallList[5]
     id6 = StallList[6]
-    warp_seven_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1][id4-id3-1][id5-id4-1][id6-id5-1] = warp_seven_c[id0][id1-id0-1][id2-id1-1][id3-id2-1][id4-id3-1][id5-id4-1][id6-id5-1] + 1
+    warp_seven_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1][id4-id3-1][id5-id4-1][id6-id5-1] = warp_seven_c[SM][sched_num][id0][id1-id0-1][id2-id1-1][id3-id2-1][id4-id3-1][id5-id4-1][id6-id5-1] + 1
     return warp_seven_c
 
 # Function to add stalls to eight stall list
@@ -1218,8 +1219,12 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
 
 # Main Function
 def main():
-    filename="out_b+tree"
-    outfile="out_b+tree_test"
+    #filename="/u/ls24/rodinia/cuda/hotpot/stall_output.txt"
+    outfile="fast_pred_result.txt"
+
+    data_folder = Path("/u/ls24/rodinia/cuda/b+tree/")
+    filename = data_folder / "stall_output.txt"
+    
     fout=open(outfile,"w")
     numStalls=10 #Number of stalls to consider
 
