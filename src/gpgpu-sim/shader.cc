@@ -1039,9 +1039,19 @@ void shader_core_ctx::issue_warp(register_set &pipe_reg_set,
   updateSIMTStack(warp_id, *pipe_reg);
 
   m_scoreboard->reserveRegisters(*pipe_reg);
-  if(next_inst->op==LOAD_OP||next_inst->op==TENSOR_CORE_LOAD_OP||next_inst->op==TENSOR_CORE_STORE_OP||next_inst->op==STORE_OP)
+  if(next_inst->op==LOAD_OP ||
+    next_inst->op==TENSOR_CORE_LOAD_OP ||
+    next_inst->op==TENSOR_CORE_STORE_OP ||
+    next_inst->op==STORE_OP ||
+    next_inst->op == MEMORY_BARRIER_OP)
 	  m_scoreboard->reserveRegistersMem(*pipe_reg);
-  if(next_inst->op==SFU_OP||next_inst->op==TENSOR_CORE_OP||next_inst->op==DP_OP||next_inst->op==SP_OP||next_inst->op==INTP_OP||next_inst->op==ALU_SFU_OP)
+  else if(next_inst->op==SFU_OP ||
+     next_inst->op==TENSOR_CORE_OP ||
+     next_inst->op==DP_OP ||
+     next_inst->op==SP_OP ||
+     next_inst->op==INTP_OP ||
+     next_inst->op==ALU_SFU_OP ||
+     next_inst->op >= SPEC_UNIT_START_ID)
 	  m_scoreboard->reserveRegistersComp(*pipe_reg);
   m_warp[warp_id]->set_next_pc(next_inst->pc + next_inst->isize);
 }
@@ -2953,8 +2963,8 @@ void ldst_unit::cycle() {
         if (!pending_requests) {
           m_core->warp_inst_complete(*m_dispatch_reg);
           m_scoreboard->releaseRegisters(m_dispatch_reg);
-	  m_scoreboard->releaseRegistersMem(m_dispatch_reg);
-	  m_scoreboard->releaseRegistersComp(m_dispatch_reg);
+          m_scoreboard->releaseRegistersMem(m_dispatch_reg);
+          m_scoreboard->releaseRegistersComp(m_dispatch_reg);
         }
         m_core->dec_inst_in_pipeline(warp_id);
         m_dispatch_reg->clear();
