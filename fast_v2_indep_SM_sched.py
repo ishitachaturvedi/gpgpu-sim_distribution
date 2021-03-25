@@ -441,8 +441,6 @@ def indeps(numStalls,warp_indep_c,counter,num_shaders,num_sched):
 
     # For each stall find the minimum speedup across all SMs -  min speedup = max # of cycles left after (total cycles the sched in SM runs for - #cycles stalled because of a particular stall)
     for stall in range(numStalls):
-        #DEBUG
-        print(stall)
         # Max number of cycles left after removing the stall
         maxCyclesLeft = 0
         maxCyclesLeft1 = 0
@@ -455,15 +453,6 @@ def indeps(numStalls,warp_indep_c,counter,num_shaders,num_sched):
                     maxCyclesLeft = diff
                     cyclesSMRan = counter[SM][sched]
         
-        if(stall == 1):
-            for SM in range(num_shaders):
-                for sched in range(num_sched):
-                    diff = counter[SM][sched] - warp_indep_c[SM][sched][stall]
-                    if (diff >  maxCyclesLeft1):
-                        maxCyclesLeft1 = diff
-                        cyclesSMRan1 = counter[SM][sched]
-                        #DEBUG
-                        print("SM ",SM," sched ",sched," reduced cyc ",maxCyclesLeft1," total cycles ran ",cyclesSMRan1)
         # Now add the # cycles left after stall removal and total number of cycles the SM ran for with stalls to indep
         temp = []
         temp.append(stall)
@@ -807,7 +796,8 @@ def intitialiseCounter(num_shaders,num_sched):
     for shader in range(num_shaders):
         warp_shader =[]
         for sched in range(num_sched):
-            warp_shader.append(0)
+            # 5001 is the number of warm up cycles for this simulator
+            warp_shader.append(5001)
         counter.append(warp_shader)
     return counter
 
@@ -976,9 +966,9 @@ def assignStalls(sched,keepSMData,warp_indep_c,warp_two_c,warp_three_c,warp_four
                 SchedStallKeeper.append(WarpStallKeeper)
     
     #DEBUG
-    if(SM == 6 and sched_num == 3 and trial == 1):
-        print(SchedStallKeeper)
-        print("************")
+    #if(SM == 6 and sched_num == 3 and trial == 1):
+    #    print(SchedStallKeeper)
+    #    print("************")
 
     warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c = putStallsInRightArray(SchedStallKeeper,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,sched_num)
 
@@ -1005,10 +995,6 @@ def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,w
             add = int(add)
             dispatches.append(add)
         
-    #DEBUG
-    #if( SM == 6 ):
-    #    print("Dispatches ",dispatches[3])
-
     DataSched0 = []
     DataSched1 = []
     DataSched2 = []
@@ -1033,13 +1019,7 @@ def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,w
             # Increase the counter for the SM schedular
             # Dont need to do any stall detection for this
             counter[SM][i] = counter[SM][i] + 1
-            #DEBUG
-            #if( SM == 6 and i == 3):
-            #    print("YES Dispatches ")
         if ( dispatches[i] == 0 ):
-            #DEBUG
-            #if( SM == 6 and i == 3):
-            #    print("NO Dispatches ")
             # Assign stalls if the schedular did not issue in this cycle
             if (i == 0):
                 warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = assignStalls(sched0,DataSched0,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i,debug_counter)
@@ -1069,7 +1049,7 @@ def ParseFile(file,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_
     keepSMData = []
 
     for line in file:
-        #increase cycle counter when SID 0 is encountered
+        # increase cycle counter when SID 0 is encountered
         if "SID 0" in line:
             cycle_counter = cycle_counter + 1
         linei = line
