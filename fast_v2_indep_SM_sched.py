@@ -441,8 +441,11 @@ def indeps(numStalls,warp_indep_c,counter,num_shaders,num_sched):
 
     # For each stall find the minimum speedup across all SMs -  min speedup = max # of cycles left after (total cycles the sched in SM runs for - #cycles stalled because of a particular stall)
     for stall in range(numStalls):
+        #DEBUG
+        print(stall)
         # Max number of cycles left after removing the stall
         maxCyclesLeft = 0
+        maxCyclesLeft1 = 0
         # Cycles the longest running SM after stall removal actually had run for 
         cyclesSMRan = 0
         for SM in range(num_shaders):
@@ -451,6 +454,16 @@ def indeps(numStalls,warp_indep_c,counter,num_shaders,num_sched):
                 if (diff >  maxCyclesLeft):
                     maxCyclesLeft = diff
                     cyclesSMRan = counter[SM][sched]
+        
+        if(stall == 1):
+            for SM in range(num_shaders):
+                for sched in range(num_sched):
+                    diff = counter[SM][sched] - warp_indep_c[SM][sched][stall]
+                    if (diff >  maxCyclesLeft1):
+                        maxCyclesLeft1 = diff
+                        cyclesSMRan1 = counter[SM][sched]
+                        #DEBUG
+                        print("SM ",SM," sched ",sched," reduced cyc ",maxCyclesLeft1," total cycles ran ",cyclesSMRan1)
         # Now add the # cycles left after stall removal and total number of cycles the SM ran for with stalls to indep
         temp = []
         temp.append(stall)
@@ -934,27 +947,38 @@ def putStallsInRightArray(SchedStallKeeper,warp_indep_c,warp_two_c,warp_three_c,
         
 
 # Function to parse the data in the outfile per scheduler to assign stalls
-def assignStalls(sched,keepSMData,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,sched_num):
+def assignStalls(sched,keepSMData,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,sched_num,debug_counter):
     # Make note if all warps in a scheduler are idle in which case the counter for the schedular for the SM is not increased, since this cycle was because of warps in other schedulers and 
     # absence of this cycle for this sched would make no difference for the warps it has
     idle = 1
     # Data structure to store unique stalls in a warp, if a particular combination of stall was present in a previous warp, it will not be added, to account for a particular kind of stall ONCE per cycle
     SchedStallKeeper = []
+
+    #DEBUG
+    trial = 0
+
     for line in keepSMData:
         if(line[0] == 'warp'):
             # check if the warp being looked into belongs to this scheduler
             # This dataStructure keeps the number of stalls and their location. Its size is the number of stalls, and each value inside it is the stall number
             WarpStallKeeper = []
-            #if (line[1] in sched):
             if (line[numStalls*2] == '0'):
                     idle = 0
             for stall in range(numStalls):
                 # 2 + stall*2 is used to index into the line correctly to pick up the right stalls 
                 if (line[2 + stall*2] == '1'):
                     WarpStallKeeper.append(stall)
-                #check for absense of idle stall, if even one warp with no idle stall, we can count this cycle
+                #DEBUG MEM_DATA
+                if (line[2 + 1*2] == '1'):
+                    trial = 1
+            #check for absense of idle stall, if even one warp with no idle stall, we can count this cycle
             if (WarpStallKeeper not in SchedStallKeeper):
                 SchedStallKeeper.append(WarpStallKeeper)
+    
+    #DEBUG
+    if(SM == 6 and sched_num == 3 and trial == 1):
+        print(SchedStallKeeper)
+        print("************")
 
     warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c = putStallsInRightArray(SchedStallKeeper,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,sched_num)
 
@@ -962,10 +986,10 @@ def assignStalls(sched,keepSMData,warp_indep_c,warp_two_c,warp_three_c,warp_four
     if (idle == 0):
         counter[SM][sched_num] = counter[SM][sched_num] + 1
 
-    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter
+    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter
 
 # Function to send schedulers which dont issue any warps for stall assignment
-def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter):
+def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,debug_counter):
     
     # Find the SM number
     # Check which schedulers did not issue a warp in this cycle
@@ -976,10 +1000,14 @@ def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,w
             add = line[1].rstrip("\n")
             add = int(add)
             SM = add
-        if (line[0] == "warp" and line[1] == "dispatches"):
+        if (line[0] == "#inst" and line[1] == "dispatched"):
             add = line[2].rstrip("\n")
             add = int(add)
             dispatches.append(add)
+        
+    #DEBUG
+    #if( SM == 6 ):
+    #    print("Dispatches ",dispatches[3])
 
     DataSched0 = []
     DataSched1 = []
@@ -997,6 +1025,7 @@ def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,w
                 DataSched2.append(line)
             elif (line[0] == "warp"  and (int(line[1]) % 4 == 3)):
                 DataSched3.append(line)
+            
 
     # if a scheduler does not dispatch, then assign appropriate stalls
     for i in range(len(dispatches)):
@@ -1004,21 +1033,27 @@ def parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,w
             # Increase the counter for the SM schedular
             # Dont need to do any stall detection for this
             counter[SM][i] = counter[SM][i] + 1
+            #DEBUG
+            #if( SM == 6 and i == 3):
+            #    print("YES Dispatches ")
         if ( dispatches[i] == 0 ):
+            #DEBUG
+            #if( SM == 6 and i == 3):
+            #    print("NO Dispatches ")
             # Assign stalls if the schedular did not issue in this cycle
             if (i == 0):
-                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = assignStalls(sched0,DataSched0,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i)
+                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = assignStalls(sched0,DataSched0,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i,debug_counter)
             elif (i == 1):
-                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = assignStalls(sched1,DataSched1,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i)
+                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = assignStalls(sched1,DataSched1,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i,debug_counter)
             elif (i == 2):
-                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = assignStalls(sched2,DataSched2,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i)
+                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = assignStalls(sched2,DataSched2,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i,debug_counter)
             elif (i == 3):
-                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = assignStalls(sched3,DataSched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i)
+                warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = assignStalls(sched3,DataSched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,SM,i,debug_counter)
 
-    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter
+    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter
 
 # Function to parse the entire file and the data per SM per cycle for stall assignment
-def ParseFile(file,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls):
+def ParseFile(file,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,debug_counter):
     # Each shader starts from keyworkd SID and a cycle is increased when keyword SID0 is hit
     # When SID is hit, all the lines are appended to a list in the SID starting from keyword "Active" till "****" is encountered
     # In these lines if a shader has a dispatch all warps belonging to the shader are ignored, else the stall types in various warps is increased by 1 
@@ -1044,10 +1079,9 @@ def ParseFile(file,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_
             keepSMData = []
         keepSMData.append(line)
         if("*******" in linei):
-            warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter)
-            
-    
-    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter
+            warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, debug_counter = parseSMData(keepSMData,sched0,sched1,sched2,sched3,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,counter,debug_counter)
+
+    return warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, cycle_counter, debug_counter
 
 # Function to initialise data-structures and send the file for parsing 
 def GetStallData(filename,outfile,fout,numStalls):
@@ -1072,18 +1106,10 @@ def GetStallData(filename,outfile,fout,numStalls):
     warp_eight_c = init_eight(num_shaders,num_sched,numStalls)
     warp_nine_c = init_nine(num_shaders,num_sched,numStalls)
 
-    #Initialise final arrays (having Reduced cycles and total cycles for each stall) in which results will be kept
-    # indep = init_one_final(numStalls)
-    # twoStall = init_two_final(numStalls)
-    # threeStall = init_three_final(numStalls)
-    # fourStall = init_four_final(numStalls)
-    # fiveStall = init_five_final(numStalls)
-    # sixStall = init_six_final(numStalls)
-    # sevenStall = init_seven_final(numStalls)
-    # eightStall = init_eight_final(numStalls)
-    # nineStall = init_nine_final(numStalls)
+    #DEBUG
+    debug_counter = 0
 
-    warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter = ParseFile(fin1,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls)
+    warp_indep_c, warp_two_c, warp_three_c, warp_four_c, warp_five_c, warp_six_c, warp_seven_c, warp_eight_c, warp_nine_c, counter, cycle_counter, debug_counter = ParseFile(fin1,max_warps,num_shaders,num_sched,warp_indep_c,warp_two_c,warp_three_c,warp_four_c,warp_five_c,warp_six_c,warp_seven_c,warp_eight_c,warp_nine_c,numStalls,debug_counter)
 
     # sort the independent stalls in descending order
     indep = indeps(numStalls,warp_indep_c,counter,num_shaders,num_sched)
@@ -1098,21 +1124,22 @@ def GetStallData(filename,outfile,fout,numStalls):
 
     fin1.close()
     
-    return indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall
+    return indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall, cycle_counter
 
 # PRINT THE STATS!!
-def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall,fout):
+def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall,fout,cycle_counter):
     names=['mem_str','mem_data','synco','comp_str','comp_data','control','ibufferw','imisspendingw','pendingWritew','idle']
+
+    fout.write("TOTAL CYCLES TAKEN "+str(cycle_counter))
 
     #independent stalls
     fout.write("\n********* INDEPENDENT STALLS ************\n")
     num = 0
     for i in range(len(indep)):
         speedup =  float(float(indep[i][2])/float(indep[i][1]))
-        print(indep[i], "speedup ",speedup)
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[indep[i][0]])+" speedup "+str(round(speedup,2))+"%\n")
+            fout.write(str(names[indep[i][0]])+" cycles "+str(indep[i][2])+" cycles reduced "+str(indep[i][1])+" speedup "+str(round(speedup,2))+"%\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1126,7 +1153,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(twoStall[i][3])/float(twoStall[i][2])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[twoStall[i][0]])+" + "+str(names[twoStall[i][1]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[twoStall[i][0]])+" + "+str(names[twoStall[i][1]])+" cycles "+str(twoStall[i][3])+" cycles reduced "+str(twoStall[i][2])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1139,7 +1166,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(threeStall[i][4])/float(threeStall[i][3])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[threeStall[i][0]])+" + "+str(names[threeStall[i][1]])+" + "+str(names[threeStall[i][2]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[threeStall[i][0]])+" + "+str(names[threeStall[i][1]])+" + "+str(names[threeStall[i][2]])+" cycles "+str(threeStall[i][4])+" cycles reduced "+str(threeStall[i][3])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1152,7 +1179,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(fourStall[i][5])/float(fourStall[i][4])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[fourStall[i][0]])+" + "+str(names[fourStall[i][1]])+" + "+str(names[fourStall[i][2]])+" + "+str(names[fourStall[i][3]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[fourStall[i][0]])+" + "+str(names[fourStall[i][1]])+" + "+str(names[fourStall[i][2]])+" + "+str(names[fourStall[i][3]])+" cycles "+str(fourStall[i][5])+" cycles reduced "+str(fourStall[i][4])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1165,7 +1192,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(fiveStall[i][6])/float(fiveStall[i][5])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[fiveStall[i][0]])+" + "+str(names[fiveStall[i][1]])+" + "+str(names[fiveStall[i][2]])+" + "+str(names[fiveStall[i][3]])+" + "+str(names[fiveStall[i][4]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[fiveStall[i][0]])+" + "+str(names[fiveStall[i][1]])+" + "+str(names[fiveStall[i][2]])+" + "+str(names[fiveStall[i][3]])+" + "+str(names[fiveStall[i][4]])+" cycles "+str(fiveStall[i][6])+" cycles reduced "+str(fiveStall[i][5])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1177,7 +1204,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(sixStall[i][7])/float(sixStall[i][6])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[sixStall[i][0]])+" + "+str(names[sixStall[i][1]])+" + "+str(names[sixStall[i][2]])+" + "+str(names[sixStall[i][3]])+" + "+str(names[sixStall[i][4]])+" + "+str(names[sixStall[i][5]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[sixStall[i][0]])+" + "+str(names[sixStall[i][1]])+" + "+str(names[sixStall[i][2]])+" + "+str(names[sixStall[i][3]])+" + "+str(names[sixStall[i][4]])+" + "+str(names[sixStall[i][5]])+" cycles "+str(sixStall[i][7])+" cycles reduced "+str(sixStall[i][6])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1189,7 +1216,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(sevenStall[i][8])/float(sevenStall[i][7])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[sevenStall[i][0]])+" + "+str(names[sevenStall[i][1]])+" + "+str(names[sevenStall[i][2]])+" + "+str(names[sevenStall[i][3]])+" + "+str(names[sevenStall[i][4]])+" + "+str(names[sevenStall[i][5]])+" + "+str(names[sevenStall[i][6]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[sevenStall[i][0]])+" + "+str(names[sevenStall[i][1]])+" + "+str(names[sevenStall[i][2]])+" + "+str(names[sevenStall[i][3]])+" + "+str(names[sevenStall[i][4]])+" + "+str(names[sevenStall[i][5]])+" + "+str(names[sevenStall[i][6]])+" cycles "+str(sevenStall[i][8])+" cycles reduced "+str(sevenStall[i][7])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1201,7 +1228,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(eightStall[i][9])/float(eightStall[i][8])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[eightStall[i][0]])+" + "+str(names[eightStall[i][1]])+" + "+str(names[eightStall[i][2]])+" + "+str(names[eightStall[i][3]])+" + "+str(names[eightStall[i][4]])+" + "+str(names[eightStall[i][5]])+" + "+str(names[eightStall[i][6]])+" + "+str(names[eightStall[i][7]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[eightStall[i][0]])+" + "+str(names[eightStall[i][1]])+" + "+str(names[eightStall[i][2]])+" + "+str(names[eightStall[i][3]])+" + "+str(names[eightStall[i][4]])+" + "+str(names[eightStall[i][5]])+" + "+str(names[eightStall[i][6]])+" + "+str(names[eightStall[i][7]])+" cycles "+str(eightStall[i][9])+" cycles reduced "+str(eightStall[i][8])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1213,7 +1240,7 @@ def printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,e
         speedup = float(nineStall[i][10])/float(nineStall[i][9])
         if(round(speedup,2)>1):
             num = 1
-            fout.write(str(names[nineStall[i][0]])+" + "+str(names[nineStall[i][1]])+" + "+str(names[nineStall[i][2]])+" + "+str(names[nineStall[i][3]])+" + "+str(names[nineStall[i][4]])+" + "+str(names[nineStall[i][5]])+" + "+str(names[nineStall[i][6]])+" + "+str(names[nineStall[i][7]])+" + "+str(names[nineStall[i][8]])+" speedup "+str(round(speedup,2))+"\n")
+            fout.write(str(names[nineStall[i][0]])+" + "+str(names[nineStall[i][1]])+" + "+str(names[nineStall[i][2]])+" + "+str(names[nineStall[i][3]])+" + "+str(names[nineStall[i][4]])+" + "+str(names[nineStall[i][5]])+" + "+str(names[nineStall[i][6]])+" + "+str(names[nineStall[i][7]])+" + "+str(names[nineStall[i][8]])+" cycles "+str(nineStall[i][10])+" cycles reduced "+str(nineStall[i][9])+" speedup "+str(round(speedup,2))+"\n")
     if(num == 0):
         fout.write("\n NO STALL REMOVAL GIVES >1 SPEEDUP\n")
 
@@ -1222,16 +1249,16 @@ def main():
     #filename="/u/ls24/rodinia/cuda/hotpot/stall_output.txt"
     outfile="fast_pred_result.txt"
 
-    data_folder = Path("/u/ls24/rodinia/cuda/b+tree/")
+    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
     filename = data_folder / "stall_output.txt"
     
     fout=open(outfile,"w")
     numStalls=10 #Number of stalls to consider
 
-    indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall=GetStallData(filename,outfile,fout,numStalls)
+    indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall,cycle_counter=GetStallData(filename,outfile,fout,numStalls)
 
     #print the output
-    printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall,fout)
+    printOut(indep,twoStall,threeStall,fourStall,fiveStall,sixStall,sevenStall,eightStall,nineStall,fout,cycle_counter)
 
 
 if __name__ == "__main__":
