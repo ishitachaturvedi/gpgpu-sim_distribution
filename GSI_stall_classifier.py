@@ -31,30 +31,30 @@ def getstats(inf,outf):
             reading_cycle = True
             continue
         
-        if(line[0]=='SCHEDULER' and line[1] != '0'):
+        if(line[0]=='SCHEDULER' and not ('0' in line[1])):
             reading_cycle = False
             continue
 
-        if(line[0]=='SID' and line[1] != '0'):
+        if(line[0]=='SID' and not ('0' in line[1])):
             reading_cycle = False
             continue
 
         if reading_cycle and line[0] == 'warp':
             # Algorithm 1 Instruction Stall Classification
             warp_stall = Stall.No_stall
-            if line[Stall.Comp_str] == "1":
+            if '1' in line[Stall.Comp_str]:
                 warp_stall = Stall.Comp_str
-            if line[Stall.Comp_data] == "1":
+            if '1' in line[Stall.Comp_data]:
                 warp_stall = Stall.Comp_data
-            if line[Stall.Mem_str] == "1":
+            if '1' in line[Stall.Mem_str]:
                 warp_stall = Stall.Mem_str
-            if line[Stall.Mem_data] == "1":
+            if '1' in line[Stall.Mem_data]:
                 warp_stall = Stall.Mem_data
-            if line[Stall.Synco] == "1":
+            if '1' in line[Stall.Synco]:
                 warp_stall = Stall.Synco
-            if line[Stall.Control] == "1":
+            if '1' in line[Stall.Control]:
                 warp_stall = Stall.Control
-            if line[Stall.Idle] == "1":
+            if '1' in line[Stall.Idle]:
                 warp_stall = Stall.Idle
 
             # Algorithm 2 Issue Cycle Stall Classification
@@ -83,7 +83,7 @@ def getstats(inf,outf):
 
         if reading_cycle and line[1] == 'dispatched':
             reading_cycle = False
-            if line[2] == '0':
+            if '0' in line[2]:
                 if cycle_stall == Stall.Mem_str:
                     mem_str += 1
                     continue
