@@ -3,12 +3,12 @@ import enum
 class Stall(enum.Enum):
    No_stall = 0
    Mem_str = 2
-   Mem_data = 3
-   Synco = 4
-   Comp_str = 5
-   Comp_data = 6
-   Control = 7
-   Idle = 11
+   Mem_data = 4
+   Synco = 6
+   Comp_str = 8
+   Comp_data = 10
+   Control = 12 
+   Idle = 20
 
 def getstats(inf,outf):
     cycles=0; #number of cycles
