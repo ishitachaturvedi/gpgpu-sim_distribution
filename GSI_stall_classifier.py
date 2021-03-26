@@ -1,3 +1,15 @@
+import enum
+
+class Stall(enum.Enum):
+   No_stall = 0
+   Mem_str = 2
+   Mem_data = 3
+   Synco = 4
+   Comp_str = 5
+   Comp_data = 6
+   Control = 7
+   Idle = 11
+
 def getstats(inf,outf):
     cycles=0; #number of cycles
     no_stall=0
@@ -8,26 +20,96 @@ def getstats(inf,outf):
     comp_data=0
     control=0
     idle=0
+    other=0
+
+    reading_cycle = False
+    cycle_stall = Stall.No_stall
     for line in inf:
         line = line.split(' ')
-        if(line[0]=='cycle'):
+        if(line[0]=='CYCLE'):
             cycles=cycles+1
-            if("0" in line[4]):
-                no_stall=no_stall+1
-            if("1" in line[4]):
-                mem_str=mem_str+1
-            if("2" in line[4]):
-                mem_data=mem_data+1
-            if("3" in line[4]):
-                synchro=synchro+1
-            if("4" in line[4]):
-                comp_str=comp_str+1
-            if("5" in line[4]):
-                comp_data=comp_data+1
-            if("6" in line[4]):
-                control=control+1
-            if("7" in line[4]):
-                idle=idle+1
+            reading_cycle = True
+            continue
+        
+        if(line[0]=='SCHEDULER' and line[1] != '0'):
+            reading_cycle = False
+            continue
+
+        if(line[0]=='SID' and line[1] != '0'):
+            reading_cycle = False
+            continue
+
+        if reading_cycle and line[0] == 'warp':
+            # Algorithm 1 Instruction Stall Classification
+            warp_stall = Stall.No_stall
+            if line[Stall.Comp_str] == "1":
+                warp_stall = Stall.Comp_str
+            if line[Stall.Comp_data] == "1":
+                warp_stall = Stall.Comp_data
+            if line[Stall.Mem_str] == "1":
+                warp_stall = Stall.Mem_str
+            if line[Stall.Mem_data] == "1":
+                warp_stall = Stall.Mem_data
+            if line[Stall.Synco] == "1":
+                warp_stall = Stall.Synco
+            if line[Stall.Control] == "1":
+                warp_stall = Stall.Control
+            if line[Stall.Idle] == "1":
+                warp_stall = Stall.Idle
+
+            # Algorithm 2 Issue Cycle Stall Classification
+            if cycle_stall == Stall.Mem_str or warp_stall == Stall.Mem_str:
+                cycle_stall = Stall.Mem_str
+                continue
+            if cycle_stall == Stall.Mem_data or warp_stall == Stall.Mem_data:
+                cycle_stall = Stall.Mem_data
+                continue
+            if cycle_stall == Stall.Synco or warp_stall == Stall.Synco:
+                cycle_stall = Stall.Synco
+                continue
+            if cycle_stall == Stall.Comp_str or warp_stall == Stall.Comp_str:
+                cycle_stall = Stall.Comp_str
+                continue
+            if cycle_stall == Stall.Comp_data or warp_stall == Stall.Comp_data:
+                cycle_stall = Stall.Comp_data
+                continue
+            if cycle_stall == Stall.Control or warp_stall == Stall.Control:
+                cycle_stall = Stall.Control
+                continue
+            if cycle_stall == Stall.Idle or warp_stall == Stall.Idle:
+                cycle_stall = Stall.Idle
+                continue
+
+
+        if reading_cycle and line[1] == 'dispatched':
+            reading_cycle = False
+            if line[2] == '0':
+                if cycle_stall == Stall.Mem_str:
+                    mem_str += 1
+                    continue
+                if cycle_stall == Stall.Mem_data:
+                    mem_data += 1
+                    continue
+                if cycle_stall == Stall.Synco:
+                    synchro += 1
+                    continue
+                if cycle_stall == Stall.Comp_str:
+                    comp_str += 1
+                    continue
+                if cycle_stall == Stall.Comp_data:
+                    comp_data += 1
+                    continue
+                if cycle_stall == Stall.Control:
+                    control += 1
+                    continue
+                if cycle_stall == Stall.Idle:
+                    idle += 1
+                    continue
+                other+=1
+
+            else:
+                no_stall += 1
+                continue         
 
     #percentages of the stalls
     per_mem_str=mem_str/cycles*100
@@ -37,6 +119,7 @@ def getstats(inf,outf):
     per_comp_data=comp_data/cycles*100
     per_control=control/cycles*100
     per_idle=idle/cycles*100
+    per_other=other/cycles*100
 
     #speedup without the stall
     speed_mem_str=cycles/(cycles-mem_str)
@@ -46,6 +129,7 @@ def getstats(inf,outf):
     speed_comp_data=cycles/(cycles-comp_data)
     speed_control=cycles/(cycles-control)
     speed_idle=cycles/(cycles-idle)
+    speed_other=cycles/(cycles-other)
 
     outf.write("CALCULATION METHOD\n")
     outf.write("Percetage stalls wrt total cycles: stall_type/total_cycles*100\n")
@@ -80,12 +164,16 @@ def getstats(inf,outf):
     outf.write("Number of stalls:"+str(idle)+"\n")
     outf.write("Percetage stalls wrt total cycles:"+str(per_idle)+"\n")
     outf.write("Speedup without stall:"+str(speed_idle)+"\n")
+    outf.write("*********other stall********\n")
+    outf.write("Number of stalls:"+str(other)+"\n")
+    outf.write("Percetage stalls wrt total cycles:"+str(per_other)+"\n")
+    outf.write("Speedup without stall:"+str(speed_other)+"\n")
 
 
    
 
 def main():
-    filename="srad_v1_gsi"
+    filename="stall_output.txt"
     outfile="srad_v1_stats"
     fin=open(filename,"r")
     fout=open(outfile,"w")
@@ -95,5 +183,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
