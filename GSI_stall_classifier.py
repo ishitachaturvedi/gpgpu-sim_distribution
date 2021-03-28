@@ -28,6 +28,7 @@ def getstats(inf,outf):
         line = line.split(' ')
         if(line[0]=='CYCLE'):
             cycles=cycles+1
+            cycle_stall = Stall.No_stall
             reading_cycle = True
             continue
         
@@ -39,22 +40,22 @@ def getstats(inf,outf):
             reading_cycle = False
             continue
 
-        if reading_cycle and line[0] == 'warp':
+        if reading_cycle and line[0] == 'warp' and len(line) > 20:
             # Algorithm 1 Instruction Stall Classification
             warp_stall = Stall.No_stall
-            if '1' in line[Stall.Comp_str]:
+            if '1' in line[Stall.Comp_str.value]:
                 warp_stall = Stall.Comp_str
-            if '1' in line[Stall.Comp_data]:
+            if '1' in line[Stall.Comp_data.value]:
                 warp_stall = Stall.Comp_data
-            if '1' in line[Stall.Mem_str]:
+            if '1' in line[Stall.Mem_str.value]:
                 warp_stall = Stall.Mem_str
-            if '1' in line[Stall.Mem_data]:
+            if '1' in line[Stall.Mem_data.value]:
                 warp_stall = Stall.Mem_data
-            if '1' in line[Stall.Synco]:
+            if '1' in line[Stall.Synco.value]:
                 warp_stall = Stall.Synco
-            if '1' in line[Stall.Control]:
+            if '1' in line[Stall.Control.value]:
                 warp_stall = Stall.Control
-            if '1' in line[Stall.Idle]:
+            if '1' in line[Stall.Idle.value]:
                 warp_stall = Stall.Idle
 
             # Algorithm 2 Issue Cycle Stall Classification
@@ -80,8 +81,7 @@ def getstats(inf,outf):
                 cycle_stall = Stall.Idle
                 continue
 
-
-        if reading_cycle and line[1] == 'dispatched':
+        if reading_cycle and len(line) > 1 and line[1] == 'dispatched':
             reading_cycle = False
             if '0' in line[2]:
                 if cycle_stall == Stall.Mem_str:
@@ -173,8 +173,10 @@ def getstats(inf,outf):
    
 
 def main():
-    filename="stall_output.txt"
-    outfile="srad_v1_stats"
+    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
+    filename = data_folder / "stall_output.txt"
+    outfile = data_folder / "gsi_stats"
+
     fin=open(filename,"r")
     fout=open(outfile,"w")
 

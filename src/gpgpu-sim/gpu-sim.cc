@@ -1875,6 +1875,7 @@ void gpgpu_sim::cycle() {
       {
         cout<<act_warp[k][i]<<" ";
       }
+      cout << "\n";
 
       for(int s=0; s<num_of_schedulers; s++)
       {
