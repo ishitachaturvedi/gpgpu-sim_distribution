@@ -367,7 +367,6 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
     if (reg_used_mem[wid].find(*it2) != reg_used_mem[wid].end())
     {
       auto pos = std::distance(reg_used_mem[wid].begin(), finder);
-      //cout <<"bef "<<SM<<" W "<<wid<<" R "<< *it2 << " res "<< reg_reserve_cycle_mem[wid][pos] <<" rel "<<reg_release_cycle_mem[wid][pos]<<"\n";
       if (reg_release_cycle_mem[wid][pos] > release_c)
       {
         reg_num = *it2;
@@ -378,8 +377,6 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   }
   result[1] = reserve_c;
   result[2] = release_c;
-  //cout <<"MS "<<SM<<" W "<<wid<<" R "<< reg_num << " res "<< reserve_c <<" rel "<<release_c<<"\n";
-  //cout<<"************\n";
 
   //SB
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
@@ -421,7 +418,6 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
     if (reg_used_comp[wid].find(*it2) != reg_used_comp[wid].end())
     {
       auto pos = std::distance(reg_used_comp[wid].begin(), finder);
-      //cout <<"bef "<<SM<<" W "<<wid<<" R "<< *it2 << " res "<< reg_reserve_cycle_comp[wid][pos] <<" rel "<<reg_release_cycle_comp[wid][pos]<<"\n";
       if (reg_release_cycle_comp[wid][pos] > release_c)
       {
         reg_num = *it2;
@@ -433,8 +429,6 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
 
   result[1] = reserve_c;
   result[2] = release_c;
-  //cout <<"CS "<<SM<<" W "<<wid<<" R "<< reg_num << " res "<< reserve_c <<" rel "<<release_c<<"\n";
-  //cout<<"************\n";
   
   //SB
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
