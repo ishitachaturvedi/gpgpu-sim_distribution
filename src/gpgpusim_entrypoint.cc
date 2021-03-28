@@ -49,7 +49,7 @@ using std::vector;
 int cycle_num;
 vector<vector<vector<int>>>stallData;
 vector<vector<int>>act_warp;
-int numstall = 13;
+int numstall = 14;
 int max_active;
 int max_warps_act;
 int max_oc_avail;
@@ -62,6 +62,9 @@ int cycle_counter;
 
 vector<vector<int>> nDispatch;
 vector<vector<int>> warpDispatch;
+
+// Data-structure to store availability of the compute/Mem units --> [SM][sched][str]
+vector<vector<vector<int>>> str_status; 
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
@@ -106,6 +109,14 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
     vector<vector<int>>(300,
       // Per Stall
       vector<int>(numstall,0)));
+
+    // Per Shader
+  str_status.resize(500,
+    // Per Sched
+    vector<vector<int>>(4,
+      // Per str
+      vector<int>(8,0)));
+
   act_warp.resize(500, vector<int>(300,0) );
   warpDispatch.resize(500, vector<int>(5 , 0) );
   nDispatch.resize(500, vector<int>(5 , 0) );

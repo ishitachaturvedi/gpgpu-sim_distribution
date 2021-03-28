@@ -67,8 +67,20 @@ typedef enum {
     idlew,
     MC, //Notes whether max release time for warp taken by Mem or Comp M-1, C-2, Both-3
     reserve,
-    release
+    release,
+    OP_TYPE //check inst type -> Look at Struct_stall_types
 } StallReasons;
+
+typedef enum {
+    mem_inst = 0,
+    sp_inst,
+    sfu_inst,
+    tensor_inst,
+    dp_inst,
+    int_inst,
+    spec_inst,
+    alu_sfu
+} Struct_stall_types;
 
 using namespace std;
 
@@ -1283,10 +1295,27 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
     //If resMem is -1 for both this cannot cause a stall since the reg was reserved for the first time, so not printing anything
 
+    // Get inst is going to which structural unit, Mem or Compute
+     if( pI->op == SP_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = sp_inst;
+      else if( pI->op == SFU_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = sfu_inst;
+      else if( pI->op == TENSOR_CORE_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = tensor_inst;
+      else if( pI->op == DP_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = dp_inst;
+      else if( pI->op == INTP_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = int_inst;
+      else if( pI->op == ALU_SFU_OP)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = alu_sfu;
+      else if( pI->op >= SPEC_UNIT_START_ID)
+        stallData[m_shader->get_sid()][warp_id][OP_TYPE] = spec_inst;
+
     if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
         (pI->op == MEMORY_BARRIER_OP) ||
         (pI->op == TENSOR_CORE_LOAD_OP) ||
-        (pI->op == TENSOR_CORE_STORE_OP)) {          
+        (pI->op == TENSOR_CORE_STORE_OP)) {     
+      stallData[m_shader->get_sid()][warp_id][OP_TYPE] = mem_inst;         
       if (m_mem_out->has_free(m_shader->m_config->sub_core_model, m_id)
         && (!diff_exec_units || previous_issued_inst_exec_type != exec_unit_type_t::MEM))
       {}
@@ -1296,6 +1325,7 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
       }
     }
     else {
+  
       bool sp_pipe_avail =
           (m_shader->m_config->gpgpu_num_sp_units > 0) &&
           m_sp_out->has_free(m_shader->m_config->sub_core_model, m_id);
@@ -1327,15 +1357,18 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
             int_pipe_avail && pI->op != SP_OP &&
             !(diff_exec_units &&
               previous_issued_inst_exec_type == exec_unit_type_t::INT))
-          execute_on_INT = true;
+          {
+            execute_on_INT = true;
+          }
         else if (sp_pipe_avail &&
                   (m_shader->m_config->gpgpu_num_int_units == 0 ||
                   (m_shader->m_config->gpgpu_num_int_units > 0 &&
                     pI->op == SP_OP)) &&
                   !(diff_exec_units && previous_issued_inst_exec_type ==
                                           exec_unit_type_t::SP))
-          execute_on_SP = true;
-
+          {
+            execute_on_SP = true;
+          }
         if (execute_on_INT || execute_on_SP) {
           if (pI->m_is_cdp && !warp(warp_id).m_cdp_dummy) {
             if (pI->m_is_cdp != 1) { return; }
@@ -1390,6 +1423,16 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
         }
       }
     }
+
+    // Get data regarding which structural units are available
+    str_status[m_shader->get_sid()][m_id][mem_inst] = (m_mem_out->has_free(m_shader->m_config->sub_core_model, m_id));
+    str_status[m_shader->get_sid()][m_id][sp_inst] =  (m_shader->m_config->gpgpu_num_sp_units > 0) && m_sp_out->has_free(m_shader->m_config->sub_core_model, m_id);
+    str_status[m_shader->get_sid()][m_id][sfu_inst] =  (m_shader->m_config->gpgpu_num_sfu_units > 0) && m_sfu_out->has_free(m_shader->m_config->sub_core_model, m_id);
+    str_status[m_shader->get_sid()][m_id][tensor_inst] =  (m_shader->m_config->gpgpu_num_tensor_core_units > 0) && m_tensor_core_out->has_free(m_shader->m_config->sub_core_model, m_id);
+    str_status[m_shader->get_sid()][m_id][dp_inst] =  (m_shader->m_config->gpgpu_num_dp_units > 0) && m_dp_out->has_free(m_shader->m_config->sub_core_model, m_id);
+    str_status[m_shader->get_sid()][m_id][int_inst] =  (m_shader->m_config->gpgpu_num_int_units > 0) && m_int_out->has_free(m_shader->m_config->sub_core_model, m_id);
+    str_status[m_shader->get_sid()][m_id][alu_sfu] =  (m_shader->m_config->gpgpu_num_sfu_units > 0) && m_sfu_out->has_free(m_shader->m_config->sub_core_model, m_id);
+
   }
   else {
     // this case can happen after a return instruction in diverged warp
@@ -1502,6 +1545,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
                 m_shader->get_active_mask(warp_id, pI);
 
             assert(warp(warp_id).inst_in_pipeline());
+            
 
             if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
                 (pI->op == MEMORY_BARRIER_OP) ||

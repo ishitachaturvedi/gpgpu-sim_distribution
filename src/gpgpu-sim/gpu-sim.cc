@@ -1866,7 +1866,7 @@ void gpgpu_sim::cycle() {
     cout<<"\n";
     cout<<"max shader "<<max_sid<<"\n";
 
-    for(int k=0;k<max_sid;k++)
+    for(int k=0;k<max_sid+1;k++)
     {
       cout<<"SID "<<k<<"\n";
 
@@ -1880,6 +1880,12 @@ void gpgpu_sim::cycle() {
       for(int s=0; s<num_of_schedulers; s++)
       {
         cout<<"SCHEDULER " << s << "\n";
+        cout << "Struct avail ";
+        for (int i = 0; i < 8; i++)
+        {
+          cout << str_status[k][s][i] <<" ";
+        }
+        cout << "\n";
         for(int i=0;i<max_active;i++)
         {
           if (act_warp[k][i] == (s+1))

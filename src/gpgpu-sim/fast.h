@@ -5,6 +5,7 @@ extern int cycle_num;
 //initialise vector of vectors as stallData[Warp #][stall #]
 extern vector<vector<vector<int>>>stallData;
 extern vector<vector<int>>act_warp;
+extern vector<vector<vector<int>>> str_status;
 
 //types of stalls
 extern int numstall;
