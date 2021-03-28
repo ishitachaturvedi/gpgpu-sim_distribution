@@ -1906,6 +1906,7 @@ void gpgpu_sim::cycle() {
     }
 
     gpu_sim_cycle++;
+    cycle_counter++;
     max_oc_avail=0;
     oc_alloc=0;
     max_oc_disp=0;

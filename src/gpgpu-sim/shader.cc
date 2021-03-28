@@ -64,7 +64,10 @@ typedef enum {
     ibufferw,
     imisspendingw,
     pendingWritew,
-    idlew
+    idlew,
+    MC, //Notes whether max release time for warp taken by Mem or Comp M-1, C-2, Both-3
+    reserve,
+    release
 } StallReasons;
 
 using namespace std;
@@ -1244,13 +1247,41 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   bool warp_inst_issued = false;
   if (pI) {
-    if(m_scoreboard->checkCollisionComp(warp_id, pI)){
+    std::vector<int> ResComp = (m_scoreboard->checkCollisionComp(warp_id, pI,m_shader->get_sid()));
+    if(ResComp[0]){
       stallData[m_shader->get_sid()][warp_id][comp_data]=1;
     }
 
-    if(m_scoreboard->checkCollisionMem(warp_id, pI) ){
+    std::vector<int> ResMem = (m_scoreboard->checkCollisionMem(warp_id, pI,m_shader->get_sid()));
+    if(ResMem[0]){
       stallData[m_shader->get_sid()][warp_id][mem_data]=1;
     }
+
+    // Check whether data stall is Mem Or Comp
+    // C/M (comp/Mem) SID Wid (reserve cycle #) (release cycle #)
+    if(ResComp[2]>ResMem[2])
+    {
+      stallData[m_shader->get_sid()][warp_id][MC]=2;
+      stallData[m_shader->get_sid()][warp_id][reserve]=ResComp[1];
+      stallData[m_shader->get_sid()][warp_id][release]=ResComp[2];
+    }
+
+    if(ResComp[2]<ResMem[2])
+    {
+      stallData[m_shader->get_sid()][warp_id][MC]=1;
+      stallData[m_shader->get_sid()][warp_id][reserve]=ResMem[1];
+      stallData[m_shader->get_sid()][warp_id][release]=ResMem[2];
+    }
+
+    // Both are creating a stall
+    if((ResComp[2] == ResMem[2]) && ResComp[2]!=-1)
+    {
+      stallData[m_shader->get_sid()][warp_id][MC]=3;
+      stallData[m_shader->get_sid()][warp_id][reserve]=ResMem[1];
+      stallData[m_shader->get_sid()][warp_id][release]=ResMem[2];
+    }
+
+    //If resMem is -1 for both this cannot cause a stall since the reg was reserved for the first time, so not printing anything
 
     if ((pI->op == LOAD_OP) || (pI->op == STORE_OP) ||
         (pI->op == MEMORY_BARRIER_OP) ||
@@ -1430,7 +1461,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
       
       // We record the stall reason of the last instruction that
       // could be issued but was stall. We can only issue from one warp
-      verify_stall(warp_id, previous_issued_inst_exec_type);
+      //verify_stall(warp_id, previous_issued_inst_exec_type);
 
       const warp_inst_t *pI = warp(warp_id).ibuffer_next_inst();
       // Jin: handle cdp latency;
@@ -1461,7 +1492,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
           warp(warp_id).ibuffer_flush();
         } else {
           valid_inst = true;
-          if (!m_scoreboard->checkCollision(warp_id, pI)) {
+          if (!m_scoreboard->checkCollision(warp_id, pI,m_shader->get_sid())) {
             SCHED_DPRINTF(
                 "Warp (warp_id %u, dynamic_warp_id %u) passes scoreboard\n",
                 (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());

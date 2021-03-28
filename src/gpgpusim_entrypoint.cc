@@ -49,7 +49,7 @@ using std::vector;
 int cycle_num;
 vector<vector<vector<int>>>stallData;
 vector<vector<int>>act_warp;
-int numstall = 10;
+int numstall = 13;
 int max_active;
 int max_warps_act;
 int max_oc_avail;
@@ -58,6 +58,7 @@ int max_oc_disp;
 int oc_disp;
 int max_sid;
 int num_of_schedulers;
+int cycle_counter;
 
 vector<vector<int>> nDispatch;
 vector<vector<int>> warpDispatch;
