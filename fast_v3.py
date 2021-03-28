@@ -9,8 +9,6 @@ max_warps = 64
 num_shaders = 27 # hardcoded for now
 # set num schedulers
 num_sched = 4 # hardcoded for now
-# counter for total cycles
-total_cycles = 0
 
 # we only consider the following stall reasons
 numStalls = 10
@@ -33,6 +31,13 @@ class Cycle:
         self.active = False
         self.issue = 0
         self.stalledOn = fullStall
+        self.count = 1
+    
+    def __eq__(self, other):
+        return self.end == other.end \
+                and self.active == other.active \
+                and self.issue == other.issue \
+                and self.stalledOn == other.stalledOn
 
 # We add one instruction to all stacks.
 # Note if a warp was inactive, we assign it an idle stall
@@ -42,7 +47,7 @@ def refill_stacks():
 
     # We fill an empty cycle in all stacks (which we then fill)
     # Initially marked as inactive
-    for k in range(num_shaders * num_sched):
+    for k in range(num_sched * num_shaders):
         for i in range(max_warps):
             stacks[k][i].append(Cycle())
 
@@ -56,11 +61,6 @@ def refill_stacks():
         split_line = line.split(' ')
         sid = int(split_line[1].rstrip("\n"))
 
-        # For now, skip all non-zero shaders
-        if sid != 0:
-            line = fin.readline()
-            continue
-
         # Read the data for the entire shader
         while '******' not in line:
             # Read the data for all warps in a scheduler
@@ -73,11 +73,6 @@ def refill_stacks():
                     sched_id = 0
 
                 stack_id = sid * num_sched + sched_id
-
-                # For now, skip all non-zero schedulers
-                if sched_id != 0:
-                    line = fin.readline()
-                    continue
 
                 while 'dispatched' not in line:
                     if 'warp dispatches' in line:
@@ -104,6 +99,14 @@ def refill_stacks():
                 stacks[stack_id][wDispatched][-1].issue = nDispatched
             line = fin.readline()
         line = fin.readline()
+
+    # Compress elements in stack if they are equal
+    # This is really useful for idle or inactive warps
+    for k in range(num_sched * num_shaders):
+        for i in range(max_warps):
+            if len(stacks[k][i]) >= 2 and (stacks[k][i][-1] == stacks[k][i][-2]):
+                stacks[k][i].pop()
+                stacks[k][i][-1].count += 1
     
     # If we reached EOF, add end signaler to all warps
     if not line:
@@ -111,14 +114,14 @@ def refill_stacks():
         endCycle = Cycle()
         endCycle.end = True
 
-        for k in range(num_shaders * num_sched):
+        for k in range(num_sched * num_shaders):
             for i in range(max_warps):
                 # If any warps have been inactive until now,
                 # delete all inactive cycles from the end
                 if stacks[k][i]:
                     next_cycle = stacks[k][i][-1]
                     while next_cycle.active == False:
-                        stacks[k][i].popleft()
+                        stacks[k][i].pop()
                         if not stacks[k][i]:
                             break
                         next_cycle = stacks[k][i][-1]
@@ -144,7 +147,11 @@ def pop_next_cycle_for_warp(stack_id,index):
     if stacks[stack_id][index][0].end:
         return stacks[stack_id][index][0]
     else:
-        return stacks[stack_id][index].pop()
+        if stacks[stack_id][index][0].count > 1:
+            stacks[stack_id][index][0].count -= 1
+            return stacks[stack_id][index][0]
+        else:
+            return stacks[stack_id][index].popleft()
 
 def read_next_cycle_for_warp(stack_id, index):
     # If the top of stack i is empty, read one more cycle from file
@@ -183,7 +190,7 @@ def cycle(fixedStalls):
             for i in range(len(stacks[k])):
                 next_cycle = read_next_cycle_for_warp(k, i)
                 
-                if are_stalls_solved(next_cycle, fixedStalls):
+                if next_cycle.active == True and are_stalls_solved(next_cycle, fixedStalls):
                     issued = True
                     # Remove 1 cycle from everyone to indicate
                     # 1 cycle of progress
@@ -206,11 +213,12 @@ def cycle(fixedStalls):
                     # Add said cycles as full stalls
                     readd_cycle = Cycle()
                     readd_cycle.active = True
-                    for j in range(readd):
+                    readd_cycle.count = readd
+                    if readd > 0:
                         stacks[k][i].appendleft(readd_cycle)
                     break
         
-        # If we still did not issue, we top the top of every warp's stack
+        # If we still did not issue, we pop the top of every warp's stack
         # to indicate one cycle has passed
         if not issued and not end:
             for i in range(len(stacks[k])):
@@ -224,6 +232,7 @@ def cycle(fixedStalls):
 def profileStalls(filename, fixedStalls):
     global fin
     global stacks
+    global total_cycles
     
     fin = open(filename,"r")
     # The stacks of "cycles" for each warp (per SM scheduler)
@@ -244,10 +253,12 @@ def profileStalls(filename, fixedStalls):
 
     done = False
     cycles = 0
+    total_cycles = 0
     while not done:
         done = cycle(fixedStalls)
         cycles += 1            
 
+    cycles -= 1 # We were done in the previous cycle
     for stall in fixedStalls:
         print(stall.name, end=' ')
     print(total_cycles - cycles)
@@ -255,8 +266,8 @@ def profileStalls(filename, fixedStalls):
 
 # Main Function
 def main():
-    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
-    filename = data_folder / "stall_output.txt"
+    data_folder = Path(".")
+    filename = data_folder / "small_stall.txt"
     
     fixedStalls = [Stall.Mem_data]
     profileStalls(filename, fixedStalls)
