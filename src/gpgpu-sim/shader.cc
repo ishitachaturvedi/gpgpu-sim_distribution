@@ -1461,7 +1461,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
       
       // We record the stall reason of the last instruction that
       // could be issued but was stall. We can only issue from one warp
-      //verify_stall(warp_id, previous_issued_inst_exec_type);
+      verify_stall(warp_id, previous_issued_inst_exec_type);
 
       const warp_inst_t *pI = warp(warp_id).ibuffer_next_inst();
       // Jin: handle cdp latency;
