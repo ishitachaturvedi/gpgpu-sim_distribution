@@ -32,6 +32,14 @@ class Cycle:
         self.issue = 0
         self.stalledOn = fullStall
         self.count = 1
+
+        # New data
+        self.cycleNumber = -1
+        self.conflictType = 0
+        self.lastDataConflict = -1
+        self.lastMemConflict = -1
+        self.functionalUnit = -1
+        self.structState = [1] * 7
     
     def __eq__(self, other):
         return self.end == other.end \
@@ -73,8 +81,15 @@ def refill_stacks():
                     sched_id = 0
 
                 stack_id = sid * num_sched + sched_id
+                struct_info = []
 
                 while 'dispatched' not in line:
+                    if 'Struct avail' in line:
+                        split_line = line.split(' ')[2:]
+                        for i in range(len(split_line)):
+                            struct_info.append(int(split_line[i].rstrip("\n")))
+
+
                     if 'warp dispatches' in line:
                         split_line = line.split(' ')
                         wDispatched = int(split_line[2].rstrip("\n"))
@@ -89,6 +104,15 @@ def refill_stacks():
                             for i in range(numStalls):
                                 stalls.append(int(split_line[2+2*i]))
                             stacks[stack_id][warp_id][-1].stalledOn = stalls
+
+                            # Get new scoreboard / struct data
+                            stacks[stack_id][warp_id][-1].cycleNumber = total_cycles
+                            stacks[stack_id][warp_id][-1].conflictType = int(split_line[4+2*numStalls])
+                            stacks[stack_id][warp_id][-1].lastDataConflict = int(split_line[6+2*numStalls])
+                            stacks[stack_id][warp_id][-1].lastMemConflict = int(split_line[8+2*numStalls])
+                            stacks[stack_id][warp_id][-1].functionalUnit = int(split_line[10+2*numStalls])
+                            stacks[stack_id][warp_id][-1].structState = struct_info
+
                             stacks[stack_id][warp_id][-1].active = True
                     
                     line = fin.readline()
@@ -105,8 +129,11 @@ def refill_stacks():
     for k in range(num_sched * num_shaders):
         for i in range(max_warps):
             if len(stacks[k][i]) >= 2 and (stacks[k][i][-1] == stacks[k][i][-2]):
-                stacks[k][i].pop()
-                stacks[k][i][-1].count += 1
+                lastcycle = stacks[k][i].pop()
+                removecycle = stacks[k][i].pop()
+
+                lastcycle.count += removecycle.count
+                stacks[k][i].append(lastcycle)
     
     # If we reached EOF, add end signaler to all warps
     if not line:
@@ -192,6 +219,8 @@ def cycle(fixedStalls):
                 
                 if next_cycle.active == True and are_stalls_solved(next_cycle, fixedStalls):
                     issued = True
+                    cycleNumber = next_cycle.cycleNumber
+
                     # Remove 1 cycle from everyone to indicate
                     # 1 cycle of progress
                     for j in range(len(stacks[k])):
@@ -200,17 +229,50 @@ def cycle(fixedStalls):
                     # Remove cycles in this same warp until the
                     # instruction with the resolved stall was issued
                     counter = 0
+                    popped_cycles = []
                     while next_cycle.end == False and next_cycle.issue == 0:
                         next_cycle = pop_next_cycle_for_warp(k, i)
+                        popped_cycles.append(next_cycle) # We save cycles for recompute
                         counter += 1
 
                     # Decide whether some cycles need to be added into the stack
                     readd = 0
+                    # If next instruction is still stalled, it is unlikely removing the
+                    # cycles helped
                     next_cycle = read_next_cycle_for_warp(k, i)
-                    if next_cycle.end == False and not are_stalls_solved(next_cycle, fixedStalls):
-                        readd = counter
+                    if next_cycle.end == False:
+                        if not are_stalls_solved(next_cycle, fixedStalls):
+                            readd = counter
 
-                    # Add said cycles as full stalls
+                        # Add cycles if there was a hidden scoreboard collision
+                        # Conflict Type 1 and 3 are Mem_Data, 2 and 3 are Comp_Data
+                        if next_cycle.conflictType % 2 == 1 and enum.Mem_data not in fixedStalls:
+                            readd = max(readd, next_cycle.lastDataConflict - next_cycle.cycleNumber)
+                        if next_cycle.conflictType > 2 and enum.Comp_data not in fixedStalls:
+                            readd = max(readd, next_cycle.lastDataConflict - next_cycle.cycleNumber)
+
+                        # Add cycles if there was a hidden structural issue
+                        if next_cycle.functionalUnit == 0 and enum.Mem_str not in fixedStalls:
+                            badCycles = 0
+                            for cycle in popped_cycles:
+                                if cycle.structState[0] == 1:
+                                    badCycles += 1
+                                else:
+                                    break
+                            readd = max(readd, badCycles)
+
+                        if next_cycle.functionalUnit > 0 and enum.Comp_str not in fixedStalls:
+                            badCycles = 0
+                            for cycle in popped_cycles:
+                                if cycle.structState[next_cycle.functionalUnit] == 1:
+                                    badCycles += 1
+                                else:
+                                    break
+                            readd = max(readd, badCycles)
+
+                        
+
+                    # Add said cycles as full (unfixable) stalls
                     readd_cycle = Cycle()
                     readd_cycle.active = True
                     readd_cycle.count = readd
