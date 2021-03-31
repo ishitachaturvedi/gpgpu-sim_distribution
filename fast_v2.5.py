@@ -274,8 +274,8 @@ def profileStalls(filename, fixedStalls):
 
 # Main Function
 def main():
-    data_folder = Path(".")
-    filename = data_folder / "small_stall.txt"
+    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
+    filename = data_folder / "stall_output.txt"
     
     fixedStalls = [Stall.Mem_data]
     profileStalls(filename, fixedStalls)
