@@ -4,7 +4,7 @@ from pathlib import Path
 import enum
 
 # set max number of warps in the system
-max_warps = 64
+max_warps = 32
 # set num shaders
 num_shaders = 27 # hardcoded for now
 # set num schedulers
@@ -60,7 +60,7 @@ def refill_stacks():
     # We fill an empty cycle in all stacks (which we then fill)
     # Initially marked as inactive
     for k in range(num_sched * num_shaders):
-        for i in range(max_warps):
+        for i in range(max_warps / num_sched):
             stacks[k][i].append(Cycle())
 
     line = ' '
@@ -110,7 +110,7 @@ def refill_stacks():
                     else:
                         if 'warp' in line:
                             split_line = line.split(' ')
-                            warp_id = int(split_line[1].rstrip("\n"))
+                            warp_id = int(split_line[1].rstrip("\n"))  / num_sched
 
                             stalls = []
                             for i in range(numStalls):
@@ -119,10 +119,10 @@ def refill_stacks():
 
                             # Get new scoreboard / struct data
                             stacks[stack_id][warp_id][-1].cycleNumber = total_cycles
-                            stacks[stack_id][warp_id][-1].conflictType = int(split_line[4+2*numStalls])
-                            stacks[stack_id][warp_id][-1].lastReserved = int(split_line[6+2*numStalls])
-                            stacks[stack_id][warp_id][-1].lastReleased = int(split_line[8+2*numStalls])
-                            stacks[stack_id][warp_id][-1].functionalUnit = int(split_line[10+2*numStalls])
+                            stacks[stack_id][warp_id][-1].conflictType = int(split_line[2+2*numStalls])
+                            stacks[stack_id][warp_id][-1].lastReserved = int(split_line[4+2*numStalls])
+                            stacks[stack_id][warp_id][-1].lastReleased = int(split_line[6+2*numStalls])
+                            stacks[stack_id][warp_id][-1].functionalUnit = int(split_line[8+2*numStalls])
                             stacks[stack_id][warp_id][-1].structState = struct_info
 
                             stacks[stack_id][warp_id][-1].active = True
@@ -139,7 +139,7 @@ def refill_stacks():
     # Compress elements in stack if they are equal
     # This is really useful for idle or inactive warps
     for k in range(num_sched * num_shaders):
-        for i in range(max_warps):
+        for i in range(max_warps / num_sched):
             if len(stacks[k][i]) >= 2 and (stacks[k][i][-1] == stacks[k][i][-2]):
                 stacks[k][i].pop()
                 stacks[k][i][-1].count += 1
@@ -151,7 +151,7 @@ def refill_stacks():
         endCycle.end = True
 
         for k in range(num_sched * num_shaders):
-            for i in range(max_warps):
+            for i in range(max_warps / num_sched):
                 # If any warps have been inactive until now,
                 # delete all inactive cycles from the end
                 if stacks[k][i]:
@@ -327,7 +327,7 @@ def profileStalls(filename, fixedStalls):
     stacks = []
     for i in range(num_shaders * num_sched):
         sched_stack = []
-        for j in range(max_warps):
+        for j in range(max_warps / num_sched):
             sched_stack.append(deque([]))
         stacks.append(sched_stack)
 
