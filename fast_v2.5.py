@@ -48,7 +48,7 @@ def refill_stacks():
     # We fill an empty cycle in all stacks (which we then fill)
     # Initially marked as inactive
     for k in range(num_sched * num_shaders):
-        for i in range(max_warps / num_sched):
+        for i in range(int(max_warps / num_sched)):
             stacks[k][i].append(Cycle())
 
     line = ' '
@@ -85,13 +85,13 @@ def refill_stacks():
                 while 'dispatched' not in line:
                     if 'warp dispatches' in line:
                         split_line = line.split(' ')
-                        wDispatched = int(split_line[2].rstrip("\n"))
+                        wDispatched = int(int(split_line[2].rstrip("\n")) / num_sched)
 
                     # Update the warp object with the stall information
                     else:
                         if 'warp' in line:
                             split_line = line.split(' ')
-                            warp_id = int(split_line[1].rstrip("\n")) / num_sched
+                            warp_id = int(int(split_line[1].rstrip("\n")) / num_sched)
 
                             stalls = []
                             for i in range(numStalls):
@@ -111,7 +111,7 @@ def refill_stacks():
     # Compress elements in stack if they are equal
     # This is really useful for idle or inactive warps
     for k in range(num_sched * num_shaders):
-        for i in range(max_warps / num_sched):
+        for i in range(int(max_warps / num_sched)):
             if len(stacks[k][i]) >= 2 and (stacks[k][i][-1] == stacks[k][i][-2]):
                 stacks[k][i].pop()
                 stacks[k][i][-1].count += 1
@@ -123,7 +123,7 @@ def refill_stacks():
         endCycle.end = True
 
         for k in range(num_sched * num_shaders):
-            for i in range(max_warps / num_sched):
+            for i in range(int(max_warps / num_sched)):
                 # If any warps have been inactive until now,
                 # delete all inactive cycles from the end
                 if stacks[k][i]:
@@ -247,7 +247,7 @@ def profileStalls(filename, fixedStalls):
     stacks = []
     for i in range(num_shaders * num_sched):
         sched_stack = []
-        for j in range(max_warps / num_sched):
+        for j in range(int(max_warps / num_sched)):
             sched_stack.append(deque([]))
         stacks.append(sched_stack)
 
@@ -274,8 +274,8 @@ def profileStalls(filename, fixedStalls):
 
 # Main Function
 def main():
-    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
-    filename = data_folder / "stall_output.txt"
+    data_folder = Path(".")
+    filename = data_folder / "small_stall.txt"
     
     fixedStalls = [Stall.Mem_data]
     profileStalls(filename, fixedStalls)
