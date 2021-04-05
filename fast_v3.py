@@ -263,11 +263,11 @@ def cycle(fixedStalls):
                     next_cycle = read_next_cycle_for_warp(k, i)
                     if next_cycle.end == False:
                         # # We handle the other four stalls
-                        queryStalls = [Stall.Synco, Stall.IMiss, Stall.IBuffer]
+                        queryStalls = [Stall.Synco]
                         if stalls_present(next_cycle, queryStalls, fixedStalls):
                             readd = counter
 
-                        # # We do not care about control stalls or idle stalls
+                        # # We do not care about control stalls, empty ibuffer stalls or idle stalls
                         # # As if we dispatch an instruction early they resolve
                         # # themselves early.
 
@@ -308,7 +308,7 @@ def cycle(fixedStalls):
                             badCycles = 0
                             for cycle in popped_cycles:
                                 # If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to memstr hazard
-                                if cycle.structState[0] == 1:
+                                if cycle.structState[0] == 0:
                                     badCycles += 1
                                 else:
                                     break
@@ -318,7 +318,7 @@ def cycle(fixedStalls):
                             badCycles = 0
                             for cycle in popped_cycles:
                                 # If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to compstr hazard
-                                if (cycle.structState[next_cycle.functionalUnit] == 1):
+                                if (cycle.structState[next_cycle.functionalUnit] == 0):
                                     badCycles += 1
                                 else:
                                     break
