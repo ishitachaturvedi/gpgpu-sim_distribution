@@ -240,7 +240,6 @@ def cycle(fixedStalls):
 
                 if next_cycle.active == True and are_stalls_solved(next_cycle, fixedStalls):
                     issued = True
-                    cycleNumber = next_cycle.cycleNumber
 
                     # Remove 1 cycle from everyone to indicate
                     # 1 cycle of progress
@@ -274,24 +273,34 @@ def cycle(fixedStalls):
                         # Add cycles if there was a hidden scoreboard collision
                         # Conflict Type 1 and 3 are Mem_Data, 2 and 3 are Comp_Data
                         if next_cycle.conflictType % 2 == 1 and Stall.Mem_data not in fixedStalls and next_cycle.lastReleased:
-                            badCycles = 0
-                            for cycle in popped_cycles:
-                                # While we have a register that got reserved and not released
-                                if cycle.lastReleased < cycle.lastReserved:
-                                    badCycles += 1
-                                else:
-                                    break
-                            readd = max(readd, badCycles)
+                            # If we still have the conflict, readd all cycles
+                            if next_cycle.lastReserved > next_cycle.lastReleased:
+                                readd = counter
+                            else:
+                            # Readd cycles until last released
+                                badCycles = 0
+                                for cycle in popped_cycles:
+                                    # While we have a register that got reserved and not released
+                                    if cycle.cycleNumber < next_cycle.lastReleased:
+                                        badCycles += 1
+                                    else:
+                                        break
+                                readd = max(readd, badCycles)
 
                         if next_cycle.conflictType > 2 and Stall.Comp_data not in fixedStalls:
-                            badCycles = 0
-                            for cycle in popped_cycles:
-                                # While we have a register that got reserved and not released
-                                if cycle.lastReleased < cycle.lastReserved:
-                                    badCycles += 1
-                                else:
-                                    break
-                            readd = max(readd, badCycles)
+                            # If we still have the conflict, readd all cycles
+                            if next_cycle.lastReserved > next_cycle.lastReleased:
+                                readd = counter
+                            else:
+                            # Readd cycles until last released
+                                badCycles = 0
+                                for cycle in popped_cycles:
+                                    # While we have a register that got reserved and not released
+                                    if cycle.cycleNumber < next_cycle.lastReleased:
+                                        badCycles += 1
+                                    else:
+                                        break
+                                readd = max(readd, badCycles)
 
                         # Add cycles if there was a hidden structural issue
                         if next_cycle.functionalUnit == 0 and Stall.Mem_str not in fixedStalls:
