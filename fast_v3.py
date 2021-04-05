@@ -264,7 +264,7 @@ def cycle(fixedStalls):
                     if next_cycle.end == False:
                         # # We handle the other four stalls
                         queryStalls = [Stall.Synco, Stall.IMiss, Stall.IBuffer]
-                        if not are_stalls_solved(next_cycle, queryStalls, fixedStalls):
+                        if stalls_present(next_cycle, queryStalls, fixedStalls):
                             readd = counter
 
                         # # We do not care about control stalls or idle stalls
