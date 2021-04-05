@@ -309,7 +309,7 @@ def cycle(fixedStalls):
                         if next_cycle.functionalUnit == 0 and Stall.Mem_str not in fixedStalls:
                             badCycles = 0
                             for cycle in popped_cycles:
-                                #If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to memstr hazard
+                                # If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to memstr hazard
                                 if cycle.structState[0] == 1:
                                     badCycles += 1
                                 else:
@@ -319,9 +319,7 @@ def cycle(fixedStalls):
                         if next_cycle.functionalUnit > 0 and Stall.Comp_str not in fixedStalls:
                             badCycles = 0
                             for cycle in popped_cycles:
-                                #if cycle.structState[next_cycle.functionalUnit] == 1:
-                                #if (are_stalls_solved(next_cycle, [Stall.Comp_str]) and cycle.structState[next_cycle.functionalUnit] == 1):
-                                #If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to compstr hazard
+                                # If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to compstr hazard
                                 if (cycle.structState[next_cycle.functionalUnit] == 1):
                                     badCycles += 1
                                 else:
