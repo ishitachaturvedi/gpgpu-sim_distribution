@@ -55,7 +55,6 @@ class Cycle:
 # Note if a warp was inactive, we assign it an idle stall
 def refill_stacks():
     global total_cycles
-    total_cycles += 1
 
     # We fill an empty cycle in all stacks (which we then fill)
     # Initially marked as inactive
@@ -137,6 +136,10 @@ def refill_stacks():
                 stacks[stack_id][wDispatched][-1].issue = nDispatched
             line = fin.readline()
         line = fin.readline()
+
+    if "CYCLE" in line:
+        split_line = line.split(' ')
+        total_cycles = int(split_line[1].rstrip("\n"))
 
     # Compress elements in stack if they are equal
     # This is really useful for idle or inactive warps
