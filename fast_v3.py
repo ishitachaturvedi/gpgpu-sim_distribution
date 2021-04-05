@@ -120,7 +120,7 @@ def refill_stacks():
                             split_line = line.split(' ')
                             if('\n' in split_line):
                                 split_line.remove('\n')
-                            warp_id = int(split_line[1] / num_sched)
+                            warp_id = int(int(split_line[1]) / num_sched)
 
                             stalls = []
                             for i in range(numStalls):
