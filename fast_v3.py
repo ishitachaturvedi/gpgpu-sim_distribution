@@ -374,7 +374,7 @@ def profileStalls(filename, fixedStalls):
 
 # Main Function
 def main():
-    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
+    data_folder = Path("/u/ishitac/gpu_codes/rodinia_3.1/cuda/nn")
     filename = data_folder / "stall_output.txt"
 
     fixedStalls = [Stall.Mem_data]
