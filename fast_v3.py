@@ -59,8 +59,8 @@ def refill_stacks():
 
     # We fill an empty cycle in all stacks (which we then fill)
     # Initially marked as inactive
-    for k in range(int(max_warps / num_sched)):
-        for i in range(max_warps):
+    for k in range(num_sched * num_shaders):
+        for i in range(int(max_warps / num_sched)):
             stacks[k][i].append(Cycle())
 
     line = ' '
@@ -69,10 +69,8 @@ def refill_stacks():
         if 'SID' not in line:
             line = fin.readline()
             continue
-
+        
         split_line = line.split(' ')
-        if('\n' in split_line):
-            split_line.remove('\n')
         sid = int(split_line[1].rstrip("\n"))
 
         if sid >= num_shaders or sid < 0:
@@ -84,8 +82,6 @@ def refill_stacks():
             # Read the data for all warps in a scheduler
             if 'SCHEDULER' in line:
                 split_line = line.split(' ')
-                if('\n' in split_line):
-                    split_line.remove('\n')
                 sched_id = int(split_line[1].rstrip("\n"))
 
                 # TEMPORARY TO FIX OUTPUT BUG
@@ -102,25 +98,19 @@ def refill_stacks():
                 while 'dispatched' not in line:
                     if 'Struct avail' in line:
                         split_line = line.split(' ')[2:]
-                        if('\n' in split_line):
-                            split_line.remove('\n')
                         for i in range(len(split_line)):
                             struct_info.append(int(split_line[i].rstrip("\n")))
 
 
                     if 'warp dispatches' in line:
                         split_line = line.split(' ')
-                        if('\n' in split_line):
-                            split_line.remove('\n')
                         wDispatched = int(int(split_line[2].rstrip("\n")) / num_sched)
 
                     # Update the warp object with the stall information
                     else:
                         if 'warp' in line:
                             split_line = line.split(' ')
-                            if('\n' in split_line):
-                                split_line.remove('\n')
-                            warp_id = int(int(split_line[1]) / num_sched)
+                            warp_id = int(int(split_line[1])  / num_sched)
 
                             stalls = []
                             for i in range(numStalls):
@@ -136,13 +126,11 @@ def refill_stacks():
                             stacks[stack_id][warp_id][-1].structState = struct_info
 
                             stacks[stack_id][warp_id][-1].active = True
-
+                    
                     line = fin.readline()
 
                 # If we exited the cycle, the currently line is '#inst dispatched'
                 split_line = line.split(' ')
-                if('\n' in split_line):
-                    split_line.remove('\n')
                 nDispatched = int(split_line[2].rstrip("\n"))
                 stacks[stack_id][wDispatched][-1].issue = nDispatched
             line = fin.readline()
@@ -150,20 +138,20 @@ def refill_stacks():
 
     # Compress elements in stack if they are equal
     # This is really useful for idle or inactive warps
-    for k in range(int(max_warps / num_sched)):
-        for i in range(max_warps):
+    for k in range(num_sched * num_shaders):
+        for i in range(int(max_warps / num_sched)):
             if len(stacks[k][i]) >= 2 and (stacks[k][i][-1] == stacks[k][i][-2]):
                 stacks[k][i].pop()
                 stacks[k][i][-1].count += 1
-
+    
     # If we reached EOF, add end signaler to all warps
     if not line:
         # Create an element at the end of each stack to signal end
         endCycle = Cycle()
         endCycle.end = True
 
-        for k in range(int(max_warps / num_sched)):
-            for i in range(max_warps):
+        for k in range(num_sched * num_shaders):
+            for i in range(int(max_warps / num_sched)):
                 # If any warps have been inactive until now,
                 # delete all inactive cycles from the end
                 if stacks[k][i]:
@@ -221,7 +209,7 @@ def read_next_cycle_for_warp(stack_id, index):
 def cycle(fixedStalls):
     end = True
 
-    for k in range(int(max_warps / num_sched)):
+    for k in range(num_sched * num_shaders):
         issued = False
         # Find issuing warp
         for i in range(len(stacks[k])):
@@ -355,9 +343,9 @@ def profileStalls(filename, fixedStalls):
     fin = open(filename,"r")
     # The stacks of "cycles" for each warp (per SM scheduler)
     stacks = []
-    for i in range(int(max_warps / num_sched)):
+    for i in range(num_sched * num_shaders):
         sched_stack = []
-        for j in range(max_warps):
+        for j in range(int(max_warps / num_sched)):
             sched_stack.append(deque([]))
         stacks.append(sched_stack)
 
