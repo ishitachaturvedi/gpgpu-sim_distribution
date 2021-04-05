@@ -137,9 +137,7 @@ def refill_stacks():
             line = fin.readline()
         line = fin.readline()
 
-    if "CYCLE" in line:
-        split_line = line.split(' ')
-        total_cycles = int(split_line[1].rstrip("\n"))
+    total_cycles += 1
 
     # Compress elements in stack if they are equal
     # This is really useful for idle or inactive warps
