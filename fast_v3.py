@@ -186,6 +186,16 @@ def are_stalls_solved(cycle, fixedStalls):
             return False
     return True
 
+def stalls_present(cycle, stallQuery, fixedStalls):
+    # Ignore resolved stalls
+    for stall in fixedStalls:
+        cycle.stalledOn[stall.value] = 0
+    # Return true if any is not fixed
+    for stall in stallQuery:
+        if cycle.stalledOn[stall.value] == 1:
+            return True
+    return False
+
 def pop_next_cycle_for_warp(stack_id,index):
     # If the top of stack i is empty, read one more cycle from file
     if not stacks[stack_id][index]:
@@ -262,10 +272,14 @@ def cycle(fixedStalls):
                     # cycles helped
                     next_cycle = read_next_cycle_for_warp(k, i)
                     if next_cycle.end == False:
-                        # # We handle the other four stalls separately
-                        # okStalls = fixedStalls + [Stall.Mem_data, Stall.Mem_str, Stall.Comp_str, Stall.Comp_data]
-                        # if not are_stalls_solved(next_cycle, okStalls):
-                        #     readd = counter
+                        # # We handle the other four stalls
+                        queryStalls = [Stall.Synco, Stall.IMiss, Stall.IBuffer]
+                        if not are_stalls_solved(next_cycle, queryStalls, fixedStalls):
+                            readd = counter
+
+                        # # We do not care about control stalls or idle stalls
+                        # # As if we dispatch an instruction early they resolve
+                        # # themselves early.
 
                         # Add cycles if there was a hidden scoreboard collision
                         # Conflict Type 1 and 3 are Mem_Data, 2 and 3 are Comp_Data
@@ -273,8 +287,7 @@ def cycle(fixedStalls):
                             badCycles = 0
                             for cycle in popped_cycles:
                                 # While we have a register that got reserved and not released
-                                #if cycle.lastReleased < cycle.lastReserved:
-                                if ((cycle.issue == 0) and  (are_stalls_solved(cycle, fixedStalls)) and (cycle.lastReleased < cycle.lastReserved)):
+                                if cycle.lastReleased < cycle.lastReserved:
                                     badCycles += 1
                                 else:
                                     break
@@ -284,8 +297,7 @@ def cycle(fixedStalls):
                             badCycles = 0
                             for cycle in popped_cycles:
                                 # While we have a register that got reserved and not released
-                                #if cycle.lastReleased < cycle.lastReserved:
-                                if ((cycle.issue == 0) and  (are_stalls_solved(cycle, fixedStalls)) and (cycle.lastReleased < cycle.lastReserved)):
+                                if cycle.lastReleased < cycle.lastReserved:
                                     badCycles += 1
                                 else:
                                     break
@@ -295,10 +307,8 @@ def cycle(fixedStalls):
                         if next_cycle.functionalUnit == 0 and Stall.Mem_str not in fixedStalls:
                             badCycles = 0
                             for cycle in popped_cycles:
-                                #if cycle.structState[0] == 1:
-                                #if (are_stalls_solved(next_cycle, [Stall.Mem_str]) and cycle.structState[0] == 1):
                                 #If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to memstr hazard
-                                if ((cycle.issue == 0) and  (are_stalls_solved(cycle, fixedStalls)) and cycle.structState[0] == 1):
+                                if cycle.structState[0] == 1:
                                     badCycles += 1
                                 else:
                                     break
@@ -310,7 +320,7 @@ def cycle(fixedStalls):
                                 #if cycle.structState[next_cycle.functionalUnit] == 1:
                                 #if (are_stalls_solved(next_cycle, [Stall.Comp_str]) and cycle.structState[next_cycle.functionalUnit] == 1):
                                 #If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to compstr hazard
-                                if ((cycle.issue == 0) and  (are_stalls_solved(cycle, fixedStalls)) and cycle.functionalUnit == 1):
+                                if (cycle.structState[next_cycle.functionalUnit] == 1):
                                     badCycles += 1
                                 else:
                                     break
