@@ -98,6 +98,8 @@ def refill_stacks():
                 while 'dispatched' not in line:
                     if 'Struct avail' in line:
                         split_line = line.split(' ')[2:]
+                        if('\n' in split_line):
+                            split_line.remove('\n')
                         for i in range(len(split_line)):
                             struct_info.append(int(split_line[i].rstrip("\n")))
 
