@@ -275,7 +275,7 @@ def cycle(fixedStalls):
 
                         # Add cycles if there was a hidden scoreboard collision
                         # Conflict Type 1 and 3 are Mem_Data, 2 and 3 are Comp_Data
-                        if next_cycle.conflictType % 2 == 1 and Stall.Mem_data not in fixedStalls and next_cycle.lastReleased:
+                        if next_cycle.conflictType % 2 == 1 and Stall.Mem_data not in fixedStalls:
                             # If we still have the conflict, readd all cycles
                             if next_cycle.lastReserved > next_cycle.lastReleased:
                                 readd = counter
