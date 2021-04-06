@@ -1893,7 +1893,7 @@ void gpgpu_sim::cycle() {
             cout<<"warp "<<i<<" ";
             for(int j=0;j<numstall;j++)
             {
-              cout<<stallData[k][i][j]<< " ; ";
+              cout<<stallData[k][i][j]<< " ";
               stallData[k][i][j]=0;
             }
             cout<<"\n";

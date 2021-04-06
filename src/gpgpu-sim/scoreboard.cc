@@ -41,21 +41,12 @@ Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
   m_sid = sid;
   // Initialize size of table
   reg_table.resize(n_warps);
-  reg_used.resize(n_warps);
-  reg_release_cycle.resize(n_warps);
-  reg_reserve_cycle.resize(n_warps);
-  reg_used_mem.resize(n_warps);
-  reg_release_cycle_mem.resize(n_warps);
-  reg_reserve_cycle_mem.resize(n_warps);
-  reg_used_comp.resize(n_warps);
-  reg_release_cycle_comp.resize(n_warps);
-  reg_reserve_cycle_comp.resize(n_warps);
   longopregs.resize(n_warps);
+
+  /* New variables for FAST */
   reg_table_mem.resize(n_warps);
-  reg_table_comp.resize(n_warps); 
-  longopregs_local.resize(n_warps);
-  longopregs_global.resize(n_warps);
-  longopregs_tex.resize(n_warps);
+  reg_table_comp.resize(n_warps);
+
   m_gpu = gpu;
 }
 
@@ -83,63 +74,18 @@ void Scoreboard::reserveRegister(unsigned wid, unsigned regnum) {
   SHADER_DPRINTF(SCOREBOARD, "Reserved Register - warp:%d, reg: %d\n", wid,
                  regnum);
   reg_table[wid].insert(regnum);
-
-  // check if the regnum has never been added to reg_used
-  if (!(reg_used[wid].find(regnum) != reg_used[wid].end()))
-  {
-    // The regnum has not been added to reg_used
-    reg_used[wid].insert(regnum);
-    auto finder = reg_used[wid].find(regnum);
-    auto pos = std::distance(reg_used[wid].begin(), finder);
-    reg_reserve_cycle[wid].insert(reg_reserve_cycle[wid].begin()+pos,cycle_counter);
-    reg_release_cycle[wid].insert(reg_release_cycle[wid].begin()+pos,-1);
-  }
-  else
-  {
-    auto finder = reg_used[wid].find(regnum);
-    auto pos = std::distance(reg_used[wid].begin(), finder);
-    reg_reserve_cycle[wid][pos]=cycle_counter;
-  }
 }
 
 void Scoreboard::reserveRegisterMem(unsigned wid, unsigned regnum) {
   reg_table_mem[wid].insert(regnum);
 
-  if (!(reg_used_mem[wid].find(regnum) != reg_used_mem[wid].end()))
-  {
-    // The regnum has not been added to reg_used
-    reg_used_mem[wid].insert(regnum);
-    auto finder = reg_used_mem[wid].find(regnum);
-    auto pos = std::distance(reg_used_mem[wid].begin(), finder);
-    reg_reserve_cycle_mem[wid].insert(reg_reserve_cycle_mem[wid].begin()+pos,cycle_counter);
-    reg_release_cycle_mem[wid].insert(reg_release_cycle_mem[wid].begin()+pos,-1);
-  }
-  else
-  {
-    auto finder = reg_used_mem[wid].find(regnum);
-    auto pos = std::distance(reg_used_mem[wid].begin(), finder);
-    reg_reserve_cycle_mem[wid][pos]=cycle_counter;
-  }
+  reg_reserved_mem[regnum] = std::pair<int,int>(wid, regnum);
 }
 
 void Scoreboard::reserveRegisterComp(unsigned wid, unsigned regnum) {
   reg_table_comp[wid].insert(regnum);
 
-  if (!(reg_used_comp[wid].find(regnum) != reg_used_comp[wid].end()))
-  {
-    // The regnum has not been added to reg_used
-    reg_used_comp[wid].insert(regnum);
-    auto finder = reg_used_comp[wid].find(regnum);
-    auto pos = std::distance(reg_used_comp[wid].begin(), finder);
-    reg_reserve_cycle_comp[wid].insert(reg_reserve_cycle_comp[wid].begin()+pos,cycle_counter);
-    reg_release_cycle_comp[wid].insert(reg_release_cycle_comp[wid].begin()+pos,-1);
-  }
-  else
-  {
-    auto finder = reg_used_comp[wid].find(regnum);
-    auto pos = std::distance(reg_used_comp[wid].begin(), finder);
-    reg_reserve_cycle_comp[wid][pos]=cycle_counter;
-  }
+  reg_reserved_comp[regnum] = std::pair<int,int>(wid, cycle_counter);
 }
 
 // Unmark register as write-pending
@@ -148,11 +94,6 @@ void Scoreboard::releaseRegister(unsigned wid, unsigned regnum) {
   SHADER_DPRINTF(SCOREBOARD, "Release register - warp:%d, reg: %d\n", wid,
                  regnum);
   reg_table[wid].erase(regnum);
-  {
-    auto finder = reg_used[wid].find(regnum);
-    auto pos = std::distance(reg_used[wid].begin(), finder);
-    reg_release_cycle[wid][pos]=cycle_counter;
-  }
 }
 
 //unmark registers as write Pending for mem operations
@@ -160,9 +101,7 @@ void Scoreboard::releaseRegisterMem(unsigned wid, unsigned regnum) {
   if (!(reg_table_mem[wid].find(regnum) != reg_table_mem[wid].end())) return;
   reg_table_mem[wid].erase(regnum);
 
-  auto finder = reg_used_mem[wid].find(regnum);
-  auto pos = std::distance(reg_used_mem[wid].begin(), finder);
-  reg_release_cycle_mem[wid][pos]=cycle_counter;
+  reg_released_mem[regnum] = cycle_counter;
 }
 
 //unmark registers as write pending for comp operations
@@ -170,9 +109,7 @@ void Scoreboard::releaseRegisterComp(unsigned wid, unsigned regnum) {
   if (!(reg_table_comp[wid].find(regnum) != reg_table_comp[wid].end())) return;
   reg_table_comp[wid].erase(regnum);
 
-  auto finder = reg_used_comp[wid].find(regnum);
-  auto pos = std::distance(reg_used_comp[wid].begin(), finder);
-  reg_release_cycle_comp[wid][pos]=cycle_counter;
+  reg_released_comp[regnum] = cycle_counter;
 }
 
 const bool Scoreboard::islongop(unsigned warp_id, unsigned regnum) {
@@ -180,17 +117,13 @@ const bool Scoreboard::islongop(unsigned warp_id, unsigned regnum) {
 }
 
 void Scoreboard::reserveRegisters(const class warp_inst_t* inst) {
- //cout << "SB warp "<<inst->warp_id() << " reg ";
   for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
-    //DEBUG
-    //cout << inst->out[r] << " ";
     if (inst->out[r] > 0) {
       reserveRegister(inst->warp_id(), inst->out[r]);
       SHADER_DPRINTF(SCOREBOARD, "Reserved register - warp:%d, reg: %d\n",
                      inst->warp_id(), inst->out[r]);
     }
   }
-  //cout<<"\n";
 
   // Keep track of long operations
   if (inst->is_load() && (inst->space.get_type() == global_space ||
@@ -215,21 +148,6 @@ void Scoreboard::reserveRegistersMem(const class warp_inst_t* inst) {
       reserveRegisterMem(inst->warp_id(), inst->out[r]);
       SHADER_DPRINTF(SCOREBOARD, "Reserved register - warp:%d, reg: %d\n",
                      inst->warp_id(), inst->out[r]);
-    }
-  }
-
-  // Keep track of long operations
-  for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
-	if (inst->out[r] > 0) {
-         if (inst->is_load())
-         {
-	  if(inst->space.get_type() == global_space)
-		  longopregs_global[inst->warp_id()].insert(inst->out[r]);
-	  if(inst->space.get_type() == local_space)
-		  longopregs_local[inst->warp_id()].insert(inst->out[r]);
-	  if(inst->space.get_type() == tex_space)
-		  longopregs_tex[inst->warp_id()].insert(inst->out[r]);
-        }
     }
   }
 }
@@ -262,13 +180,6 @@ void Scoreboard::releaseRegistersMem(const class warp_inst_t* inst) {
   for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
     if (inst->out[r] > 0) {
       releaseRegisterMem(inst->warp_id(), inst->out[r]);
-      //longopregs_mem[inst->warp_id()].erase(inst->out[r]);
-      if(inst->space.get_type() == global_space)
-                  longopregs_global[inst->warp_id()].erase(inst->out[r]);
-          if(inst->space.get_type() == local_space)
-                  longopregs_local[inst->warp_id()].erase(inst->out[r]);
-          if(inst->space.get_type() == tex_space)
-                  longopregs_tex[inst->warp_id()].erase(inst->out[r]);
     }
   }
 }
@@ -306,27 +217,6 @@ bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst,unsigned 
   // Check for collision, get the intersection of reserved registers and
   // instruction registers
   std::set<int>::const_iterator it2;
-  
-  // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
-  // unsigned reg_num = -1;
-  // int reserve_c = -1;
-  // int release_c = -1;
-  // for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
-  // {
-  //   auto finder = reg_used[wid].find(*it2);
-  //   if (reg_used[wid].find(*it2) != reg_used[wid].end())
-  //   {
-  //     auto pos = std::distance(reg_used[wid].begin(), finder);
-  //     if (reg_release_cycle[wid][pos] > release_c)
-  //     {
-  //       reg_num = *it2;
-  //       reserve_c = reg_reserve_cycle[wid][pos];
-  //       release_c = reg_release_cycle[wid][pos];
-  //     }
-  //   }
-  // }
-  // cout <<"S "<<SM<<" W "<<wid<<" R "<< reg_num << " res "<< reserve_c <<" rel "<<release_c<<"\n";
-
   //SB conflict check
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
@@ -341,7 +231,7 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   // Get list of all input and output registers
   std::set<int> inst_regs;
   std::vector<int> result;
-  result.resize(3);
+  result.resize(4);
 
   for (unsigned iii = 0; iii < inst->outcount; iii++)
     inst_regs.insert(inst->out[iii]);
@@ -358,25 +248,29 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   std::set<int>::const_iterator it2;
 
   // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
-  int reg_num = -1;
   int reserve_c = -1;
-  int release_c = -1;
+  int release_c = -2;
+  int warp_c = -1;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
-    auto finder = reg_used_mem[wid].find(*it2);
-    if (reg_used_mem[wid].find(*it2) != reg_used_mem[wid].end())
+    if (reg_reserved_mem.count(*it2) == 0) continue;
+    int reserve = reg_reserved_mem[*it2].first;
+    int warp = reg_reserved_mem[*it2].second;
+
+    if (reg_released_mem.count(*it2) == 0) continue;
+    int release = reg_released_mem[*it2];
+
+    // Take latest reservation that was released
+    if (reserve <= release && release > release_c)
     {
-      auto pos = std::distance(reg_used_mem[wid].begin(), finder);
-      if (reg_release_cycle_mem[wid][pos] > release_c)
-      {
-        reg_num = *it2;
-        reserve_c = reg_reserve_cycle_mem[wid][pos];
-        release_c = reg_release_cycle_mem[wid][pos];
-      }
+      reserve_c = reserve;
+      release_c = release;
+      warp_c = warp;
     }
   }
   result[1] = reserve_c;
   result[2] = release_c;
+  result[3] = warp_c;
 
   //SB
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
@@ -392,7 +286,7 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   // Get list of all input and output registers
   std::set<int> inst_regs;
   std::vector<int> result;
-  result.resize(3);
+  result.resize(4);
 
   for (unsigned iii = 0; iii < inst->outcount; iii++)
     inst_regs.insert(inst->out[iii]);
@@ -409,26 +303,29 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   std::set<int>::const_iterator it2;
 
   // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
-  int reg_num = -1;
   int reserve_c = -1;
   int release_c = -1;
+  int warp_c = -1;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
-    auto finder = reg_used_comp[wid].find(*it2);
-    if (reg_used_comp[wid].find(*it2) != reg_used_comp[wid].end())
+    if (reg_reserved_mem.count(*it2) == 0) continue;
+    int reserve = reg_reserved_mem[*it2].first;
+    int warp = reg_reserved_mem[*it2].second;
+
+    if (reg_released_mem.count(*it2) == 0) continue;
+    int release = reg_released_mem[*it2];
+
+    // Take latest reservation that was released
+    if (reserve <= release && release > release_c)
     {
-      auto pos = std::distance(reg_used_comp[wid].begin(), finder);
-      if (reg_release_cycle_comp[wid][pos] > release_c)
-      {
-        reg_num = *it2;
-        reserve_c = reg_reserve_cycle_comp[wid][pos];
-        release_c = reg_release_cycle_comp[wid][pos];
-      }
+      reserve_c = reserve;
+      release_c = release;
+      warp_c = warp;
     }
   }
-
   result[1] = reserve_c;
   result[2] = release_c;
+  result[3] = warp_c;
   
   //SB
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)

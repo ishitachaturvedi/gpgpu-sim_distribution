@@ -141,6 +141,8 @@ class shd_warp_t {
 
   bool functional_done() const;
   bool waiting();  // not const due to membar
+  bool waiting_barrier();
+  bool waiting_idle();
   bool hardware_done() const;
 
   bool done_exit() const { return m_done_exit; }

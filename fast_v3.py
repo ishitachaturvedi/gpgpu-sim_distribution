@@ -262,7 +262,7 @@ def cycle(fixedStalls):
                     # cycles helped
                     next_cycle = read_next_cycle_for_warp(k, i)
                     if next_cycle.end == False:
-                        # # We handle the other four stalls
+                        # # We handle the synchronization
                         queryStalls = [Stall.Synco]
                         if stalls_present(next_cycle, queryStalls, fixedStalls):
                             readd = counter

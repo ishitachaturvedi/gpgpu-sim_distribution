@@ -29,6 +29,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <set>
+#include <map>
+#include <tuple>
 #include <vector>
 #include "assert.h"
 
@@ -75,45 +77,23 @@ class Scoreboard {
   // keeps track of pending writes to registers
   // indexed by warp id, reg_id => pending write count
   std::vector<std::set<unsigned> > reg_table;
-  // Data structure to store all the used registers in a warp
-  std::vector<std::set<unsigned>> reg_used;
-  // Data structure to store the last cycle in which these registers were released
-  std::vector<std::vector<int>> reg_release_cycle;
-  // Data structure to store the last cycle in which these registers were reserved 
-  std::vector<std::vector<int>> reg_reserve_cycle;
   // Register that depend on a long operation (global, local or tex memory)
   std::vector<std::set<unsigned> > longopregs;
 
   void reserveRegisterMem(unsigned wid, unsigned regnum);
   void reserveRegisterComp(unsigned wid, unsigned regnum);
 
-  // EACH WARP HAS ITS OWN SET OF REGISTERS --> HUNCH
-
   //keep track of pending writes to memory operations
   std::vector<std::set<unsigned> > reg_table_mem;
   //keep track of pending writes to computation operations
   std::vector<std::set<unsigned> > reg_table_comp;
-  // Register that depend on a long operation (global, local or tex memory)
-  // Register that depend on a long local mem operation (global, local or tex memory)
-  std::vector<std::set<unsigned> > longopregs_local;
-  // Register that depend on a long global mem operation (global, local or tex memory)
-  std::vector<std::set<unsigned> > longopregs_global;
-  // Register that depend on a long tex mem operation (global, local or tex memory)
-  std::vector<std::set<unsigned> > longopregs_tex;
 
-  // Data structure to store all the used registers in a warp
-  std::vector<std::set<unsigned>> reg_used_mem;
-  // Data structure to store the last cycle in which these registers were released
-  std::vector<std::vector<int>> reg_release_cycle_mem;
-  // Data structure to store the last cycle in which these registers were reserved 
-  std::vector<std::vector<int>> reg_reserve_cycle_mem;
+  // Data structure to store reserve cycle plus reserving warp
+  std::map<unsigned, std:pair<int,int>> reg_reserved_mem;
+  std::map<unsigned, int> reg_released_mem;
 
-  // Data structure to store all the used registers in a warp
-  std::vector<std::set<unsigned>> reg_used_comp;
-  // Data structure to store the last cycle in which these registers were released
-  std::vector<std::vector<int>> reg_release_cycle_comp;
-  // Data structure to store the last cycle in which these registers were reserved 
-  std::vector<std::vector<int>> reg_reserve_cycle_comp;
+  std::map<unsigned, std:pair<int,int>> reg_reserved_comp;
+  std::map<unsigned, int> reg_released_comp;
 
   class gpgpu_t *m_gpu;
 };
