@@ -253,12 +253,13 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   int warp_c = -1;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
-    if (reg_reserved_mem.count(*it2) == 0) continue;
-    int reserve = reg_reserved_mem[*it2].first;
-    int warp = reg_reserved_mem[*it2].second;
+    unsigned regnum = *it2;
+    if (reg_reserved_mem.count(regnum) == 0) continue;
+    int reserve = reg_reserved_mem[regnum].first;
+    int warp = reg_reserved_mem[regnum].second;
 
-    if (reg_released_mem.count(*it2) == 0) continue;
-    int release = reg_released_mem[*it2];
+    if (reg_released_mem.count(regnum) == 0) continue;
+    int release = reg_released_mem[regnum];
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
@@ -308,12 +309,13 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   int warp_c = -1;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
-    if (reg_reserved_mem.count(*it2) == 0) continue;
-    int reserve = reg_reserved_mem[*it2].first;
-    int warp = reg_reserved_mem[*it2].second;
+    unsigned regnum = *it2;
+    if (reg_reserved_mem.count(regnum) == 0) continue;
+    int reserve = reg_reserved_mem[regnum].first;
+    int warp = reg_reserved_mem[regnum].second;
 
-    if (reg_released_mem.count(*it2) == 0) continue;
-    int release = reg_released_mem[*it2];
+    if (reg_released_mem.count(regnum) == 0) continue;
+    int release = reg_released_mem[regnum];
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
