@@ -255,11 +255,11 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   {
     unsigned regnum = *it2;
     if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = (*reg_reserved_mem[regnum]).first;
-    int warp = (*reg_reserved_mem[regnum]).second;
+    int reserve = (reg_reserved_mem.find(regnum)->second).first;
+    int warp = (reg_reserved_mem.find(regnum)->second).second;
 
     if (reg_released_mem.count(regnum) == 0) continue;
-    int release = *reg_released_mem[regnum];
+    int release = reg_released_mem.find(regnum)->second;
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
@@ -311,11 +311,11 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   {
     unsigned regnum = *it2;
     if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = (*reg_reserved_mem[regnum]).first;
-    int warp = (*reg_reserved_mem[regnum]).second;
+    int reserve = (reg_reserved_mem.find(regnum)->second).first;
+    int warp = (reg_reserved_mem.find(regnum)->second).second;
 
     if (reg_released_mem.count(regnum) == 0) continue;
-    int release = *reg_released_mem[regnum];
+    int release = reg_released_mem.find(regnum)->second;
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
