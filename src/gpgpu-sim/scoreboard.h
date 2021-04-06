@@ -89,10 +89,10 @@ class Scoreboard {
   std::vector<std::set<unsigned> > reg_table_comp;
 
   // Data structure to store reserve cycle plus reserving warp
-  std::map<unsigned, std:pair<int,int>> reg_reserved_mem;
+  std::map<unsigned, std::pair<int,int>> reg_reserved_mem;
   std::map<unsigned, int> reg_released_mem;
 
-  std::map<unsigned, std:pair<int,int>> reg_reserved_comp;
+  std::map<unsigned, std::pair<int,int>> reg_reserved_comp;
   std::map<unsigned, int> reg_released_comp;
 
   class gpgpu_t *m_gpu;
