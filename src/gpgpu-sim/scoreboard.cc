@@ -47,6 +47,11 @@ Scoreboard::Scoreboard(unsigned sid, unsigned n_warps, class gpgpu_t* gpu)
   reg_table_mem.resize(n_warps);
   reg_table_comp.resize(n_warps);
 
+  reg_reserved_mem.resize(n_warps);
+  reg_released_mem.resize(n_warps);
+  reg_reserved_comp.resize(n_warps);
+  reg_released_comp.resize(n_warps);
+
   m_gpu = gpu;
 }
 
@@ -79,13 +84,13 @@ void Scoreboard::reserveRegister(unsigned wid, unsigned regnum) {
 void Scoreboard::reserveRegisterMem(unsigned wid, unsigned regnum) {
   reg_table_mem[wid].insert(regnum);
 
-  reg_reserved_mem[regnum] = std::pair<int,int>(wid, regnum);
+  reg_reserved_mem[wid][regnum] = cycle_counter;
 }
 
 void Scoreboard::reserveRegisterComp(unsigned wid, unsigned regnum) {
   reg_table_comp[wid].insert(regnum);
 
-  reg_reserved_comp[regnum] = std::pair<int,int>(wid, cycle_counter);
+  reg_reserved_comp[wid][regnum] = cycle_counter;
 }
 
 // Unmark register as write-pending
@@ -101,7 +106,7 @@ void Scoreboard::releaseRegisterMem(unsigned wid, unsigned regnum) {
   if (!(reg_table_mem[wid].find(regnum) != reg_table_mem[wid].end())) return;
   reg_table_mem[wid].erase(regnum);
 
-  reg_released_mem[regnum] = cycle_counter;
+  reg_released_mem[wid][regnum] = cycle_counter;
 }
 
 //unmark registers as write pending for comp operations
@@ -109,7 +114,7 @@ void Scoreboard::releaseRegisterComp(unsigned wid, unsigned regnum) {
   if (!(reg_table_comp[wid].find(regnum) != reg_table_comp[wid].end())) return;
   reg_table_comp[wid].erase(regnum);
 
-  reg_released_comp[regnum] = cycle_counter;
+  reg_released_comp[wid][regnum] = cycle_counter;
 }
 
 const bool Scoreboard::islongop(unsigned warp_id, unsigned regnum) {
@@ -200,7 +205,7 @@ void Scoreboard::releaseRegistersComp(const class warp_inst_t* inst) {
  * @return
  * true if WAW or RAW hazard (no WAR since in-order issue)
  **/
-bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst,unsigned SM) const {
+bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst) const {
   // Get list of all input and output registers
   std::set<int> inst_regs;
 
@@ -227,67 +232,11 @@ bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst,unsigned 
   return false;
 }
 
-std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t* inst, unsigned SM) const {
+std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t* inst) const {
   // Get list of all input and output registers
   std::set<int> inst_regs;
   std::vector<int> result;
-  result.resize(4);
-
-  for (unsigned iii = 0; iii < inst->outcount; iii++)
-    inst_regs.insert(inst->out[iii]);
-
-  for (unsigned jjj = 0; jjj < inst->incount; jjj++)
-    inst_regs.insert(inst->in[jjj]);
-
-  if (inst->pred > 0) inst_regs.insert(inst->pred);
-  if (inst->ar1 > 0) inst_regs.insert(inst->ar1);
-  if (inst->ar2 > 0) inst_regs.insert(inst->ar2);
-
-  // Check for collision, get the intersection of reserved registers and
-  // instruction registers
-  std::set<int>::const_iterator it2;
-
-  // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
-  int reserve_c = -1;
-  int release_c = -2;
-  int warp_c = -1;
-  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
-  {
-    unsigned regnum = *it2;
-    if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = (reg_reserved_mem.find(regnum)->second).first;
-    int warp = (reg_reserved_mem.find(regnum)->second).second;
-
-    if (reg_released_mem.count(regnum) == 0) continue;
-    int release = reg_released_mem.find(regnum)->second;
-
-    // Take latest reservation that was released
-    if (reserve <= release && release > release_c)
-    {
-      reserve_c = reserve;
-      release_c = release;
-      warp_c = warp;
-    }
-  }
-  result[1] = reserve_c;
-  result[2] = release_c;
-  result[3] = warp_c;
-
-  //SB
-  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
-    if (reg_table_mem[wid].find(*it2) != reg_table_mem[wid].end()) {
-	    result[0] = 1;
-      return result;
-    }
-  result[0] = 0;
-  return result;
-}
-
-std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t* inst, unsigned SM) const {
-  // Get list of all input and output registers
-  std::set<int> inst_regs;
-  std::vector<int> result;
-  result.resize(4);
+  result.resize(3);
 
   for (unsigned iii = 0; iii < inst->outcount; iii++)
     inst_regs.insert(inst->out[iii]);
@@ -306,28 +255,76 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
   int reserve_c = -1;
   int release_c = -1;
-  int warp_c = -1;
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
     unsigned regnum = *it2;
-    if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = (reg_reserved_mem.find(regnum)->second).first;
-    int warp = (reg_reserved_mem.find(regnum)->second).second;
+    if (reg_reserved_mem[wid].count(regnum) == 0) continue;
+    int reserve = reg_reserved_mem[wid].find(regnum)->second;
 
-    if (reg_released_mem.count(regnum) == 0) continue;
-    int release = reg_released_mem.find(regnum)->second;
+    if (reg_released_mem[wid].count(regnum) == 0) continue;
+    int release = reg_released_mem[wid].find(regnum)->second;
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
     {
       reserve_c = reserve;
       release_c = release;
-      warp_c = warp;
     }
   }
   result[1] = reserve_c;
   result[2] = release_c;
-  result[3] = warp_c;
+
+  //SB
+  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
+    if (reg_table_mem[wid].find(*it2) != reg_table_mem[wid].end()) {
+	    result[0] = 1;
+      return result;
+    }
+  result[0] = 0;
+  return result;
+}
+
+std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t* inst) const {
+  // Get list of all input and output registers
+  std::set<int> inst_regs;
+  std::vector<int> result;
+  result.resize(3);
+
+  for (unsigned iii = 0; iii < inst->outcount; iii++)
+    inst_regs.insert(inst->out[iii]);
+
+  for (unsigned jjj = 0; jjj < inst->incount; jjj++)
+    inst_regs.insert(inst->in[jjj]);
+
+  if (inst->pred > 0) inst_regs.insert(inst->pred);
+  if (inst->ar1 > 0) inst_regs.insert(inst->ar1);
+  if (inst->ar2 > 0) inst_regs.insert(inst->ar2);
+
+  // Check for collision, get the intersection of reserved registers and
+  // instruction registers
+  std::set<int>::const_iterator it2;
+
+  // check for longest taking release Reg and print the corresponding reserve and release cycle with the register number
+  int reserve_c = -1;
+  int release_c = -1;
+  for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
+  {
+    unsigned regnum = *it2;
+    if (reg_reserved_comp[wid].count(regnum) == 0) continue;
+    int reserve = reg_reserved_comp[wid].find(regnum)->second;
+
+    if (reg_released_comp[wid].count(regnum) == 0) continue;
+    int release = reg_released_comp[wid].find(regnum)->second;
+
+    // Take latest reservation that was released
+    if (reserve <= release && release > release_c)
+    {
+      reserve_c = reserve;
+      release_c = release;
+    }
+  }
+  result[1] = reserve_c;
+  result[2] = release_c;
   
   //SB
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)

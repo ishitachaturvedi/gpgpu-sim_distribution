@@ -47,7 +47,7 @@ class Scoreboard {
   void releaseRegisters(const warp_inst_t *inst);
   void releaseRegister(unsigned wid, unsigned regnum);
 
-  bool checkCollision(unsigned wid, const inst_t *inst, unsigned SM) const;
+  bool checkCollision(unsigned wid, const inst_t *inst) const;
   bool pendingWrites(unsigned wid) const;
   void printContents() const;
   const bool islongop(unsigned warp_id, unsigned regnum);
@@ -60,13 +60,11 @@ class Scoreboard {
   void releaseRegistersComp(const warp_inst_t *inst);
   void releaseRegisterComp(unsigned wid, unsigned regnum);
 
-  //bool checkCollisionMem(unsigned wid, const inst_t *inst, unsigned SM) const;
   bool pendingWritesMem(unsigned wid) const;
-  //bool checkCollisionComp(unsigned wid, const inst_t *inst, unsigned SM) const;
   bool pendingWritesComp(unsigned wid) const;
 
-  std::vector<int> checkCollisionMem(unsigned wid, const inst_t *inst, unsigned SM) const;
-  std::vector<int> checkCollisionComp(unsigned wid, const inst_t *inst, unsigned SM) const;
+  std::vector<int> checkCollisionMem(unsigned wid, const inst_t *inst) const;
+  std::vector<int> checkCollisionComp(unsigned wid, const inst_t *inst) const;
 
  private:
   void reserveRegister(unsigned wid, unsigned regnum);
@@ -89,11 +87,11 @@ class Scoreboard {
   std::vector<std::set<unsigned> > reg_table_comp;
 
   // Data structure to store reserve cycle plus reserving warp
-  std::map<unsigned, std::pair<int,int>> reg_reserved_mem;
-  std::map<unsigned, int> reg_released_mem;
+  std::vector<std::map<unsigned, int>> reg_reserved_mem;
+  std::vector<std::map<unsigned, int>> reg_released_mem;
 
-  std::map<unsigned, std::pair<int,int>> reg_reserved_comp;
-  std::map<unsigned, int> reg_released_comp;
+  std::vector<std::map<unsigned, int>> reg_reserved_comp;
+  std::vector<std::map<unsigned, int>> reg_released_comp;
 
   class gpgpu_t *m_gpu;
 };
