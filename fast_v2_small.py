@@ -286,14 +286,14 @@ def assignStalls(sched,keepSMData,warp_indep_c,warp_two_c,warp_three_c,numStalls
             # check if the warp being looked into belongs to this scheduler
             # This dataStructure keeps the number of stalls and their location. Its size is the number of stalls, and each value inside it is the stall number
             WarpStallKeeper = []
-            if (line[numStalls*2] == '0'):
+            if (line[numStalls] == '0'):
                     idle = 0
             for stall in range(numStalls):
                 # 2 + stall*2 is used to index into the line correctly to pick up the right stalls 
-                if (line[2 + stall*2] == '1'):
+                if (line[2 + stall] == '1'):
                     WarpStallKeeper.append(stall)
                 #DEBUG MEM_DATA
-                if (line[2 + 1*2] == '1'):
+                if (line[2 + 1] == '1'):
                     trial = 1
             #check for absense of idle stall, if even one warp with no idle stall, we can count this cycle
             if (WarpStallKeeper not in SchedStallKeeper):
@@ -404,7 +404,7 @@ def GetStallData(filename,outfile,fout,numStalls):
     # set max number of warps in the system
     max_warps = 64
     # set num shaders
-    num_shaders = 27 # hardcoded for now
+    num_shaders = 28 # hardcoded for now
     # set num schedulers
     num_sched = 4 # hardcoded for now
     # initialize the data structure 
@@ -476,12 +476,13 @@ def printOut(indep,twoStall,threeStall,fout,cycle_counter):
 
 # Main Function
 def main():
-    #filename="/u/ls24/rodinia/cuda/hotpot/stall_output.txt"
+    #filename="/u/ls24/rodinia/cuda/b+tree/stall_output.txt"
     outfile="fast_pred_result.txt"
 
     data_folder = Path("/u/ls24/rodinia/cuda/nn/")
     filename = data_folder / "stall_output.txt"
-    
+    #filename = "result_v3.txt"
+
     fout=open(outfile,"w")
     numStalls=10 #Number of stalls to consider
 
