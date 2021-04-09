@@ -4183,7 +4183,7 @@ bool shd_warp_t::waiting_barrier() {
   return false;
 }
 
-bool shd_warp_t::waiting_barrier() {
+bool shd_warp_t::waiting_fence() {
   if (functional_done()) {
     // waiting to be initialized with a kernel
     return false;
