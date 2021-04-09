@@ -65,10 +65,8 @@ typedef enum {
     imisspendingw,
     pendingWritew,
     idlew,
-    warp_mem,
     reserve_mem,
     release_mem,
-    warp_comp,
     reserve_comp,
     release_comp,
     OP_TYPE, //check inst type -> Look at Struct_stall_types
@@ -1214,6 +1212,11 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
     stallData[m_shader->get_sid()][warp_id][synco]=1;
   }
 
+  if (warp(warp_id).waiting_fence())
+  {
+    stallData[m_shader->get_sid()][warp_id][pendingWritew]=1;
+  }
+
   if (warp(warp_id).ibuffer_empty())
   {
     stallData[m_shader->get_sid()][warp_id][ibufferw]=1;
@@ -1282,11 +1285,9 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
     stallData[m_shader->get_sid()][warp_id][reserve_comp]=ResComp[1];
     stallData[m_shader->get_sid()][warp_id][release_comp]=ResComp[2];
-    stallData[m_shader->get_sid()][warp_id][warp_comp]=ResComp[3];
 
     stallData[m_shader->get_sid()][warp_id][reserve_mem]=ResMem[1];
     stallData[m_shader->get_sid()][warp_id][release_mem]=ResMem[2];
-    stallData[m_shader->get_sid()][warp_id][warp_mem]=ResMem[3];
 
     // Get inst is going to which structural unit, Mem or Compute
      if( pI->op == SP_OP)
@@ -4170,13 +4171,24 @@ bool shd_warp_t::waiting_barrier() {
     return true;
   } else if (m_shader->warp_waiting_at_mem_barrier(m_warp_id)) {
     // waiting for memory barrier
-    return true;
+    return false;
   } else if (m_n_atomic > 0) {
     // waiting for atomic operation to complete at memory:
     // this stall is not required for accurate timing model, but rather we
     // stall here since if a call/return instruction occurs in the meantime
     // the functional execution of the atomic when it hits DRAM can cause
     // the wrong register to be read.
+    return true;
+  }
+  return false;
+}
+
+bool shd_warp_t::waiting_barrier() {
+  if (functional_done()) {
+    // waiting to be initialized with a kernel
+    return false;
+  } else if (m_shader->warp_waiting_at_mem_barrier(m_warp_id)) {
+    // waiting for memory barrier
     return true;
   }
   return false;
