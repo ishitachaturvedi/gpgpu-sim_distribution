@@ -258,11 +258,11 @@ std::vector<int> Scoreboard::checkCollisionMem(unsigned wid, const class inst_t*
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
     unsigned regnum = *it2;
-    if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = reg_reserved_mem.find(regnum)->second;
+    if (reg_reserved_mem[wid].count(regnum) == 0) continue;
+    int reserve = reg_reserved_mem[wid].find(regnum)->second;
 
-    if (reg_released_mem.count(regnum) == 0) continue;
-    int release = reg_released_mem.find(regnum)->second;
+    if (reg_released_mem[wid].count(regnum) == 0) continue;
+    int release = reg_released_mem[wid].find(regnum)->second;
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
@@ -310,11 +310,11 @@ std::vector<int> Scoreboard::checkCollisionComp(unsigned wid, const class inst_t
   for (it2 = inst_regs.begin(); it2 != inst_regs.end(); it2++)
   {
     unsigned regnum = *it2;
-    if (reg_reserved_mem.count(regnum) == 0) continue;
-    int reserve = reg_reserved_mem.find(regnum)->second;
+    if (reg_reserved_comp[wid].count(regnum) == 0) continue;
+    int reserve = reg_reserved_comp[wid].find(regnum)->second;
 
-    if (reg_released_mem.count(regnum) == 0) continue;
-    int release = reg_released_mem.find(regnum)->second;
+    if (reg_released_comp[wid].count(regnum) == 0) continue;
+    int release = reg_released_comp[wid].find(regnum)->second;
 
     // Take latest reservation that was released
     if (reserve <= release && release > release_c)
