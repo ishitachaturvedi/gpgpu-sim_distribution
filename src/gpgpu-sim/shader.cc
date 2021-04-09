@@ -1273,12 +1273,12 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
 
   bool warp_inst_issued = false;
   if (pI) {
-    std::vector<int> ResComp = (m_scoreboard->checkCollisionComp(warp_id, pI,m_shader->get_sid()));
+    std::vector<int> ResComp = (m_scoreboard->checkCollisionComp(warp_id, pI));
     if(ResComp[0]){
       stallData[m_shader->get_sid()][warp_id][comp_data]=1;
     }
 
-    std::vector<int> ResMem = (m_scoreboard->checkCollisionMem(warp_id, pI,m_shader->get_sid()));
+    std::vector<int> ResMem = (m_scoreboard->checkCollisionMem(warp_id, pI));
     if(ResMem[0]){
       stallData[m_shader->get_sid()][warp_id][mem_data]=1;
     }
@@ -1536,7 +1536,7 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
           warp(warp_id).ibuffer_flush();
         } else {
           valid_inst = true;
-          if (!m_scoreboard->checkCollision(warp_id, pI,m_shader->get_sid())) {
+          if (!m_scoreboard->checkCollision(warp_id, pI)) {
             SCHED_DPRINTF(
                 "Warp (warp_id %u, dynamic_warp_id %u) passes scoreboard\n",
                 (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
