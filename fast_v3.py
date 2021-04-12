@@ -4,15 +4,16 @@ from pathlib import Path
 import enum
 
 # set max number of warps in the system
-max_warps = 64
+max_warps = 2
 # set num shaders
 num_shaders = 1 # hardcoded for now
 # set num schedulers
-num_sched = 4 # hardcoded for now
+num_sched = 1 # hardcoded for now
 
 # we only consider the following stall reasons
 numStalls = 10
 fullStall = [1] * 10
+
 class Stall(enum.Enum):
    Mem_str = 0
    Mem_data = 1
@@ -25,6 +26,18 @@ class Stall(enum.Enum):
    PendingWrite = 8
    Idle = 9
 
+class Struct_stall_types(enum.Enum):
+    mem_inst = 0,
+    sp_inst = 1
+    sfu_inst = 2
+    tensor_inst = 3
+    dp_inst = 4
+    int_inst = 5
+    spec_inst = 6
+    alu_sfu = 7
+    barrier_op = 8
+    barrier_mem = 9
+
 class Cycle:
     def __init__(self):
         self.end = False
@@ -35,10 +48,12 @@ class Cycle:
 
         # New data
         self.cycleNumber = -1
-        self.conflictType = 0
-        self.lastReserved = -1
-        self.lastReleased = -1
+        self.reserve_mem = -1
+        self.release_mem = -1
+        self.reserve_comp = -1
+        self.release_comp = -1
         self.functionalUnit = -1
+        self.block_id = -1
         self.structState = [1] * 7
 
     def __eq__(self, other):
@@ -46,9 +61,12 @@ class Cycle:
                 and self.active == other.active \
                 and self.issue == other.issue \
                 and self.stalledOn == other.stalledOn \
-                and self.lastReserved == other.lastReserved \
-                and self.lastReleased == other.lastReleased \
+                and self.reserve_mem == other.reserve_mem \
+                and self.release_mem == other.release_mem \
+                and self.reserve_comp == other.reserve_comp \
+                and self.release_comp == other.release_comp \
                 and self.functionalUnit == other.functionalUnit \
+                and self.block_id == other.block_id \
                 and self.structState == other.structState \
 
 # We add one instruction to all stacks.
@@ -113,27 +131,31 @@ def refill_stacks():
                             split_line = line.split(' ')
                             warp_id = int(int(split_line[1])  / num_sched)
 
-                            stalls = []
-                            for i in range(numStalls):
-                                stalls.append(int(split_line[2+2*i]))
-                            stacks[stack_id][warp_id][-1].stalledOn = stalls
+                            if(warp_id < max_warps):
+                                stalls = []
+                                for i in range(numStalls):
+                                    stalls.append(int(split_line[2+i]))
+                                stacks[stack_id][warp_id][-1].stalledOn = stalls
 
-                            # Get new scoreboard / struct data
-                            stacks[stack_id][warp_id][-1].cycleNumber = total_cycles
-                            stacks[stack_id][warp_id][-1].conflictType = int(split_line[2+2*numStalls])
-                            stacks[stack_id][warp_id][-1].lastReserved = int(split_line[4+2*numStalls])
-                            stacks[stack_id][warp_id][-1].lastReleased = int(split_line[6+2*numStalls])
-                            stacks[stack_id][warp_id][-1].functionalUnit = int(split_line[8+2*numStalls])
-                            stacks[stack_id][warp_id][-1].structState = struct_info
+                                # Get new scoreboard / struct data
+                                stacks[stack_id][warp_id][-1].cycleNumber = total_cycles
+                                stacks[stack_id][warp_id][-1].reserve_mem = int(split_line[2+numStalls])
+                                stacks[stack_id][warp_id][-1].release_mem = int(split_line[3+numStalls])
+                                stacks[stack_id][warp_id][-1].reserve_comp = int(split_line[4+numStalls])
+                                stacks[stack_id][warp_id][-1].release_comp = int(split_line[5+numStalls])
+                                stacks[stack_id][warp_id][-1].functionalUnit = int(split_line[6+numStalls])
+                                stacks[stack_id][warp_id][-1].block_id = int(split_line[7+numStalls])
+                                stacks[stack_id][warp_id][-1].structState = struct_info
 
-                            stacks[stack_id][warp_id][-1].active = True
+                                stacks[stack_id][warp_id][-1].active = True
                     
                     line = fin.readline()
 
                 # If we exited the cycle, the currently line is '#inst dispatched'
                 split_line = line.split(' ')
                 nDispatched = int(split_line[2].rstrip("\n"))
-                stacks[stack_id][wDispatched][-1].issue = nDispatched
+                if(wDispatched < max_warps):
+                    stacks[stack_id][wDispatched][-1].issue = nDispatched
             line = fin.readline()
         line = fin.readline()
 
@@ -209,11 +231,22 @@ def read_next_cycle_for_warp(stack_id, index):
     # Read the top cycle from stack
     return stacks[stack_id][index][0]
 
-def cycle(fixedStalls):
+def cycle(fixedStalls,dual_cycle):
     end = True
 
     for k in range(num_sched * num_shaders):
         issued = False
+
+        issue_counter = 0
+        for i in range(len(stacks[k])):
+            next_cycle = read_next_cycle_for_warp(k, i)
+            if not next_cycle.end:
+                end = False
+            if next_cycle.issue > 0:
+                issue_counter = issue_counter + 1
+        if (issue_counter > 1):
+            dual_cycle = dual_cycle + issue_counter - 1
+
         # Find issuing warp
         for i in range(len(stacks[k])):
             next_cycle = read_next_cycle_for_warp(k, i)
@@ -262,46 +295,46 @@ def cycle(fixedStalls):
                     # cycles helped
                     next_cycle = read_next_cycle_for_warp(k, i)
                     if next_cycle.end == False:
-                        # # We handle the synchronization
-                        queryStalls = [Stall.Synco]
-                        if stalls_present(next_cycle, queryStalls, fixedStalls):
-                            readd = counter
+                        # # We handle the other four stalls
+                        #queryStalls = [Stall.Synco, Stall.IMiss, Stall.IBuffer]
+                        # if stalls_present(next_cycle, queryStalls, fixedStalls):
+                        #     readd = counter
 
-                        # # We do not care about control stalls, empty ibuffer stalls or idle stalls
+                        # # We do not care about control stalls or idle stalls
                         # # As if we dispatch an instruction early they resolve
                         # # themselves early.
 
                         # Add cycles if there was a hidden scoreboard collision
-                        # Conflict Type 1 and 3 are Mem_Data, 2 and 3 are Comp_Data
-                        if next_cycle.conflictType % 2 == 1 and Stall.Mem_data not in fixedStalls:
-                            # If we still have the conflict, readd all cycles
-                            if next_cycle.lastReserved > next_cycle.lastReleased:
-                                readd = counter
-                            else:
-                            # Readd cycles until last released
-                                badCycles = 0
-                                for cycle in popped_cycles:
-                                    # While we have a register that got reserved and not released
-                                    if cycle.cycleNumber < next_cycle.lastReleased:
-                                        badCycles += 1
-                                    else:
-                                        break
-                                readd = max(readd, badCycles)
+                        # If we still have the conflict, readd all cycles
 
-                        if next_cycle.conflictType > 2 and Stall.Comp_data not in fixedStalls:
-                            # If we still have the conflict, readd all cycles
-                            if next_cycle.lastReserved > next_cycle.lastReleased:
-                                readd = counter
-                            else:
-                            # Readd cycles until last released
-                                badCycles = 0
-                                for cycle in popped_cycles:
-                                    # While we have a register that got reserved and not released
-                                    if cycle.cycleNumber < next_cycle.lastReleased:
-                                        badCycles += 1
-                                    else:
-                                        break
-                                readd = max(readd, badCycles)
+                        # MEM_DATA STALLS
+                        if next_cycle.reserve_mem > next_cycle.release_mem:
+                            readd = counter
+                        else:
+                        # Readd cycles until last released
+                            badCycles = 0
+                            for cycle in popped_cycles:
+                                # While we have a register that got reserved and not released
+                                if cycle.cycleNumber < next_cycle.release_mem:
+                                    badCycles += 1
+                                else:
+                                    break
+                            readd = max(readd, badCycles)
+
+                        # COMP_DATA STALLS
+                        # If we still have the conflict, readd all cycles
+                        if next_cycle.reserve_comp > next_cycle.release_comp:
+                            readd = counter
+                        else:
+                        # Readd cycles until last released
+                            badCycles = 0
+                            for cycle in popped_cycles:
+                                # While we have a register that got reserved and not released
+                                if cycle.cycleNumber < next_cycle.release_comp:
+                                    badCycles += 1
+                                else:
+                                    break
+                            readd = max(readd, badCycles)
 
                         # Add cycles if there was a hidden structural issue
                         if next_cycle.functionalUnit == 0 and Stall.Mem_str not in fixedStalls:
@@ -318,10 +351,11 @@ def cycle(fixedStalls):
                             badCycles = 0
                             for cycle in popped_cycles:
                                 # If there was no issue on this sched in cycle, if stall type was fixed stalls would have been resolved, but no dispatch due to compstr hazard
-                                if (cycle.structState[next_cycle.functionalUnit] == 0):
-                                    badCycles += 1
-                                else:
-                                    break
+                                if(next_cycle.functionalUnit != Struct_stall_types.barrier_op.value and  next_cycle.functionalUnit != Struct_stall_types.barrier_mem.value):
+                                    if (cycle.structState[next_cycle.functionalUnit] == 0):
+                                        badCycles += 1
+                                    else:
+                                        break
                             readd = max(readd, badCycles)
 
 
@@ -330,6 +364,7 @@ def cycle(fixedStalls):
                     readd_cycle = Cycle()
                     readd_cycle.active = True
                     readd_cycle.count = readd
+                    #readd = 0
                     if readd > 0:
                         stacks[k][i].appendleft(readd_cycle)
                     break
@@ -340,12 +375,12 @@ def cycle(fixedStalls):
             for i in range(len(stacks[k])):
                 pop_next_cycle_for_warp(k, i)
 
-    return end
+    return end, dual_cycle
 
 
 
 # Function to initialise data-structures and send the file for parsing
-def profileStalls(filename, fixedStalls):
+def profileStalls(filename, fixedStalls,dual_cycle):
     global fin
     global stacks
     global total_cycles
@@ -371,7 +406,7 @@ def profileStalls(filename, fixedStalls):
     cycles = 0
     total_cycles = 0
     while not done:
-        done = cycle(fixedStalls)
+        done,dual_cycle = cycle(fixedStalls,dual_cycle)
         cycles += 1
 
     cycles -= 1 # We were done in the previous cycle
@@ -381,46 +416,60 @@ def profileStalls(filename, fixedStalls):
     print("Post stall removal ",cycles)
     print("cycles removed ",total_cycles - cycles)
     fin.close()
+    return dual_cycle
 
 # Main Function
 def main():
-    data_folder = Path("/u/ishitac/gpu_codes/rodinia_3.1/cuda/nn")
-    filename = data_folder / "result_v3.txt"
+    data_folder = Path("/u/ls24/rodinia/cuda/b+tree")
+    filename = data_folder / "stall_output.txt"
 
+    #filename = "result_v3.txt"
+
+    # Number of cycles with more than 1 issue
+    dual_cycle = 0
     fixedStalls = [Stall.Mem_data]
     print("MEMDATA")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls,dual_cycle)
+    print("DUAL CYCLE ",dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Mem_str]
     print("MEMSTR")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Synco]
     print("SYNCO")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Comp_str]
     print("COMPSTR")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Comp_data]
     print("COMPDATA")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Control]
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.IBuffer]
     print("IBUFFER")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.PendingWrite]
     print("PENDINGW")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
+    dual_cycle = 0
     fixedStalls = [Stall.Idle]
     print("IDLE")
-    profileStalls(filename, fixedStalls)
+    dual_cycle = profileStalls(filename, fixedStalls, dual_cycle)
 
 if __name__ == "__main__":
     main()
