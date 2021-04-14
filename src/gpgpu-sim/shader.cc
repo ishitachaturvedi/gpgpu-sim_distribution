@@ -77,7 +77,7 @@ std::list<unsigned> shader_core_ctx::get_regs_written(const inst_t &fvt) const {
 void exec_shader_core_ctx::create_shd_warp() {
   m_warp.resize(m_config->max_warps_per_shader);
   for (unsigned k = 0; k < m_config->max_warps_per_shader; ++k) {
-    m_warp[k] = new shd_warp_t(this, m_config->warp_size);
+    m_warp[k] = new shd_warp_t(this, m_config->warp_size, m_config->ignore_synchronization);
   }
 }
 
@@ -144,7 +144,6 @@ void shader_core_ctx::create_front_pipeline() {
     m_icnt = new perfect_memory_interface(this, m_cluster);
     if (m_config->perfect_inst_const_cache){
       m_icnt2 = m_icnt;
-      printf("PrincetonUniversityWazHere\n");
     }
     else{
       m_icnt2 = new shader_memory_interface(this, m_cluster);
@@ -858,6 +857,53 @@ const active_mask_t &exec_shader_core_ctx::get_active_mask(
   return m_simt_stack[warp_id]->get_active_mask();
 }
 
+int shader_core_ctx::fix_control_hazard(unsigned warp_id) {
+  // Instantly repair IBuffer
+  if (m_warp[warp_id]->functional_done()) {
+    return -1; // THREAD FINISHED EXECUTING. NOT A CONTROL ISSUE.
+  }
+
+  ifetch_buffer_t fetch_buffer;
+  address_type pc;
+  pc = m_warp[warp_id]->get_pc();
+  unsigned nbytes = 16;
+  fetch_buffer = ifetch_buffer_t(pc, nbytes, warp_id);
+  m_warp[warp_id]->set_last_fetch(m_gpu->gpu_sim_cycle);
+
+  // Proceed to decode instructions
+  if (fetch_buffer.m_valid) {
+    // decode 1 or 2 instructions and place them into ibuffer
+    address_type pc = fetch_buffer.m_pc;
+    const warp_inst_t *pI1 = get_next_inst(fetch_buffer.m_warp_id, pc);
+    m_warp[fetch_buffer.m_warp_id]->ibuffer_fill(0, pI1);
+    m_warp[fetch_buffer.m_warp_id]->inc_inst_in_pipeline();
+    if (pI1) {
+      m_stats->m_num_decoded_insn[m_sid]++;
+      if (pI1->oprnd_type == INT_OP) {
+        m_stats->m_num_INTdecoded_insn[m_sid]++;
+      } else if (pI1->oprnd_type == FP_OP) {
+        m_stats->m_num_FPdecoded_insn[m_sid]++;
+      }
+      const warp_inst_t *pI2 =
+          get_next_inst(fetch_buffer.m_warp_id, pc + pI1->isize);
+      if (pI2) {
+        m_warp[fetch_buffer.m_warp_id]->ibuffer_fill(1, pI2);
+        m_warp[fetch_buffer.m_warp_id]->inc_inst_in_pipeline();
+        m_stats->m_num_decoded_insn[m_sid]++;
+        if (pI2->oprnd_type == INT_OP) {
+          m_stats->m_num_INTdecoded_insn[m_sid]++;
+        } else if (pI2->oprnd_type == FP_OP) {
+          m_stats->m_num_FPdecoded_insn[m_sid]++;
+        }
+      }
+    }
+  }
+  else
+  {
+    return -1; // THIS SHOULD NOT HAPPEN, BUT IT IS NOT A CONTROL ISSUE.
+  }
+}
+
 void shader_core_ctx::decode() {
   if (m_inst_fetch_buffer.m_valid) {
     // decode 1 or 2 instructions and place them into ibuffer
@@ -1207,6 +1253,11 @@ void scheduler_unit::cycle() {
           // control hazard
           warp(warp_id).set_next_pc(pc);
           warp(warp_id).ibuffer_flush();
+          if (m_config->perfect_control)
+          {
+            fix_control_hazard(warp_id);
+            continue;
+          }
         } else {
           valid_inst = true;
           if (!m_scoreboard->checkCollision(warp_id, pI)) {
@@ -1392,6 +1443,11 @@ void scheduler_unit::cycle() {
             (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
         warp(warp_id).set_next_pc(pc);
         warp(warp_id).ibuffer_flush();
+        if (m_config->perfect_control)
+        {
+          fix_control_hazard(warp_id);
+          continue;
+        }
       }
       if (warp_inst_issued) {
         SCHED_DPRINTF(
@@ -3783,7 +3839,7 @@ bool shd_warp_t::waiting() {
     return true;
   } else if (m_shader->warp_waiting_at_barrier(m_warp_id)) {
     // waiting for other warps in CTA to reach barrier
-    return true;
+    return m_ignore_synchronization != true;
   } else if (m_shader->warp_waiting_at_mem_barrier(m_warp_id)) {
     // waiting for memory barrier
     return true;
@@ -3793,7 +3849,7 @@ bool shd_warp_t::waiting() {
     // stall here since if a call/return instruction occurs in the meantime
     // the functional execution of the atomic when it hits DRAM can cause
     // the wrong register to be read.
-    return true;
+    return m_ignore_synchronization != true;
   }
   return false;
 }

@@ -99,10 +99,11 @@ class thread_ctx_t {
 
 class shd_warp_t {
  public:
-  shd_warp_t(class shader_core_ctx *shader, unsigned warp_size)
+  shd_warp_t(class shader_core_ctx *shader, unsigned warp_size, bool synchro_disabled)
       : m_shader(shader), m_warp_size(warp_size) {
     m_stores_outstanding = 0;
     m_inst_in_pipeline = 0;
+    m_ignore_synchronization = synchro_disabled;
     reset();
   }
   void reset() {
@@ -277,6 +278,8 @@ class shd_warp_t {
   unsigned m_stores_outstanding;  // number of store requests sent but not yet
                                   // acknowledged
   unsigned m_inst_in_pipeline;
+
+  bool m_ignore_synchronization;
 
   // Jin: cdp support
  public:
@@ -1592,6 +1595,8 @@ class shader_core_config : public core_config {
   bool gpgpu_concurrent_kernel_sm;
 
   bool perfect_inst_const_cache;
+  bool perfect_control;
+  bool ignore_synchronization;
   unsigned inst_fetch_throughput;
   unsigned reg_file_port_throughput;
 
