@@ -1892,6 +1892,8 @@ class shader_core_ctx : public core_t {
               bool reset_not_completed);
   void issue_block2core(class kernel_info_t &kernel);
 
+  int fix_control_hazard(unsigned warp_id);
+
   void cache_flush();
   void cache_invalidate();
   void accept_fetch_response(mem_fetch *mf);

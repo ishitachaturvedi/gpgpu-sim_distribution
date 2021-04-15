@@ -1253,9 +1253,9 @@ void scheduler_unit::cycle() {
           // control hazard
           warp(warp_id).set_next_pc(pc);
           warp(warp_id).ibuffer_flush();
-          if (m_config->perfect_control)
+          if (m_shader->m_config->perfect_control)
           {
-            fix_control_hazard(warp_id);
+            m_shader->fix_control_hazard(warp_id);
             continue;
           }
         } else {
@@ -1443,9 +1443,9 @@ void scheduler_unit::cycle() {
             (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id());
         warp(warp_id).set_next_pc(pc);
         warp(warp_id).ibuffer_flush();
-        if (m_config->perfect_control)
+        if (m_shader->m_config->perfect_control)
         {
-          fix_control_hazard(warp_id);
+          m_shader->fix_control_hazard(warp_id);
           continue;
         }
       }
