@@ -962,7 +962,8 @@ void shader_core_ctx::fetch() {
         // reclaimed
         if (m_warp[warp_id]->hardware_done() &&
             !m_scoreboard->pendingWrites(warp_id) &&
-            !m_warp[warp_id]->done_exit()) {
+            !m_warp[warp_id]->done_exit()) &&
+            m_warp[warp_id]->done_with_synchro()) {
           bool did_exit = false;
           for (unsigned t = 0; t < m_config->warp_size; t++) {
             unsigned tid = warp_id * m_config->warp_size + t;
@@ -3852,6 +3853,21 @@ bool shd_warp_t::waiting() {
     return m_ignore_synchronization != true;
   }
   return false;
+}
+
+bool shd_warp_t::done_with_synchro() {
+  if (m_shader->warp_waiting_at_barrier(m_warp_id)) {
+    // waiting for other warps in CTA to reach barrier
+    return false;
+  } else if (m_n_atomic > 0) {
+    // waiting for atomic operation to complete at memory:
+    // this stall is not required for accurate timing model, but rather we
+    // stall here since if a call/return instruction occurs in the meantime
+    // the functional execution of the atomic when it hits DRAM can cause
+    // the wrong register to be read.
+    return false;
+  }
+  return true;
 }
 
 void shd_warp_t::print(FILE *fout) const {
