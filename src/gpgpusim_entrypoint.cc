@@ -28,6 +28,7 @@
 
 #include "gpgpusim_entrypoint.h"
 #include <stdio.h>
+#include <iostream>
 
 #include "../libcuda/gpgpu_context.h"
 #include "cuda-sim/cuda-sim.h"
@@ -37,11 +38,15 @@
 #include "gpgpu-sim/icnt_wrapper.h"
 #include "option_parser.h"
 #include "stream_manager.h"
+#include "gpgpu-sim/perfect.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
+using namespace std;
+
+int cycles_passed = 0;
 
 void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
@@ -68,6 +73,7 @@ void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
 }
 
 static void termination_callback() {
+  std::cout<<"TOTAL CYCLES TAKEN "<<cycles_passed<<"\n";
   printf("GPGPU-Sim: *** exit detected ***\n");
   fflush(stdout);
 }

@@ -77,6 +77,7 @@ class gpgpu_sim_wrapper {};
 #include <iostream>
 #include <sstream>
 #include <string>
+#include "perfect.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
@@ -1863,6 +1864,7 @@ void gpgpu_sim::cycle() {
       raise(SIGTRAP);  // Debug breakpoint
     }
     gpu_sim_cycle++;
+    cycles_passed++;
 
     if (g_interactive_debugger_enabled) gpgpu_debug();
 
