@@ -420,7 +420,7 @@ def profileStalls(filename, fixedStalls,dual_cycle):
 
 # Main Function
 def main():
-    data_folder = Path("/u/ls24/rodinia/cuda/b+tree")
+    data_folder = Path("/scratch/ls24/rodinia/cuda/b+tree")
     filename = data_folder / "stall_output.txt"
 
     #filename = "result_v3.txt"
