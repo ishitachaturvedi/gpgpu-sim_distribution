@@ -1597,6 +1597,7 @@ class shader_core_config : public core_config {
   bool perfect_inst_const_cache;
   bool perfect_control;
   bool ignore_synchronization;
+  bool pending_write_ignore;
   unsigned inst_fetch_throughput;
   unsigned reg_file_port_throughput;
 

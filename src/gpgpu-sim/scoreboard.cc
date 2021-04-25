@@ -149,6 +149,7 @@ bool Scoreboard::checkCollision(unsigned wid, const class inst_t* inst) const {
   return false;
 }
 
-bool Scoreboard::pendingWrites(unsigned wid) const {
+bool Scoreboard::pendingWrites(unsigned wid, bool ignore) const {
+  if (ignore) return false;
   return !reg_table[wid].empty();
 }

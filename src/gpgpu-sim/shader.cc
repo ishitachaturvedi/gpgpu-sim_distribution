@@ -961,7 +961,7 @@ void shader_core_ctx::fetch() {
         // this code checks if this warp has finished executing and can be
         // reclaimed
         if (m_warp[warp_id]->hardware_done() &&
-            !m_scoreboard->pendingWrites(warp_id) &&
+            !m_scoreboard->pendingWrites(warp_id, m_config->pending_write_ignore) &&
             !m_warp[warp_id]->done_exit()) {
           bool did_exit = false;
           for (unsigned t = 0; t < m_config->warp_size; t++) {
@@ -3728,7 +3728,7 @@ bool shader_core_ctx::warp_waiting_at_barrier(unsigned warp_id) const {
 
 bool shader_core_ctx::warp_waiting_at_mem_barrier(unsigned warp_id) {
   if (!m_warp[warp_id]->get_membar()) return false;
-  if (!m_scoreboard->pendingWrites(warp_id)) {
+  if (!m_scoreboard->pendingWrites(warp_id, m_config->pending_write_ignore)) {
     m_warp[warp_id]->clear_membar();
     if (m_gpu->get_config().flush_l1()) {
       // Mahmoud fixed this on Nov 2019
