@@ -59,6 +59,7 @@ int oc_disp;
 int max_sid;
 int num_of_schedulers;
 int cycle_counter;
+int actw;
 
 vector<vector<int>> nDispatch;
 vector<vector<int>> warpDispatch;

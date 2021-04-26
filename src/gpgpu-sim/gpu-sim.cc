@@ -1886,7 +1886,7 @@ void gpgpu_sim::cycle() {
         cout << "\n";
         for(int i=0;i<max_active;i++)
         {
-          if (act_warp[k][i] == (s+1))
+          //if (act_warp[k][i] == (s+1))
           {
             cout<<"warp "<<i<<" ";
             for(int j=0;j<numstall;j++)
