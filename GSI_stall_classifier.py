@@ -1,16 +1,19 @@
 import enum
+from pathlib import Path
 
 class Stall(enum.Enum):
    No_stall = 0
    Mem_str = 2
-   Mem_data = 4
-   Synco = 6
-   Comp_str = 8
-   Comp_data = 10
-   Control = 12 
-   Idle = 20
+   Mem_data = 3
+   Synco = 4
+   Comp_str = 5
+   Comp_data = 6
+   Control = 7
+   IBuffer = 8
+   PWrite = 10
+   Idle = 11
 
-def getstats(inf,outf):
+def getstats(inf):
     cycles=0; #number of cycles
     no_stall=0
     mem_str=0
@@ -19,6 +22,8 @@ def getstats(inf,outf):
     comp_str=0
     comp_data=0
     control=0
+    ibuffer = 0
+    pwrite = 0
     idle=0
     other=0
 
@@ -26,21 +31,31 @@ def getstats(inf,outf):
     cycle_stall = Stall.No_stall
     for line in inf:
         line = line.split(' ')
-        if(line[0]=='CYCLE'):
+        if('CYCLE' in line[0]):
+            if cycle_stall == Stall.Mem_str:
+                mem_str += 1
+            if cycle_stall == Stall.Mem_data:
+                mem_data += 1
+            if cycle_stall == Stall.Synco:
+                synchro += 1
+            if cycle_stall == Stall.Comp_str:
+                comp_str += 1
+            if cycle_stall == Stall.Comp_data:
+                comp_data += 1
+            if cycle_stall == Stall.Control:
+                control += 1
+            if cycle_stall == Stall.IBuffer:
+                ibuffer += 1
+            if cycle_stall == Stall.PWrite:
+                pwrite += 1
+            if cycle_stall == Stall.Idle:
+                idle += 1
+
             cycles=cycles+1
             cycle_stall = Stall.No_stall
             reading_cycle = True
-            continue
         
-        if(line[0]=='SCHEDULER' and not ('0' in line[1])):
-            reading_cycle = False
-            continue
-
-        if(line[0]=='SID' and not ('0' in line[1])):
-            reading_cycle = False
-            continue
-
-        if reading_cycle and line[0] == 'warp' and len(line) > 20:
+        if reading_cycle and line[0] == 'warp' and len(line) > 7:
             # Algorithm 1 Instruction Stall Classification
             warp_stall = Stall.No_stall
             if '1' in line[Stall.Comp_str.value]:
@@ -55,6 +70,10 @@ def getstats(inf,outf):
                 warp_stall = Stall.Synco
             if '1' in line[Stall.Control.value]:
                 warp_stall = Stall.Control
+            if '1' in line[Stall.PWrite.value]:
+                warp_stall = Stall.PWrite
+            if '1' in line[Stall.IBuffer.value]:
+                warp_stall = Stall.IBuffer
             if '1' in line[Stall.Idle.value]:
                 warp_stall = Stall.Idle
 
@@ -77,110 +96,46 @@ def getstats(inf,outf):
             if cycle_stall == Stall.Control or warp_stall == Stall.Control:
                 cycle_stall = Stall.Control
                 continue
+            if cycle_stall == Stall.IBuffer or warp_stall == Stall.IBuffer:
+                cycle_stall = Stall.IBuffer
+                continue
+            if cycle_stall == Stall.PWrite or warp_stall == Stall.PWrite:
+                cycle_stall = Stall.PWrite
+                continue            
             if cycle_stall == Stall.Idle or warp_stall == Stall.Idle:
                 cycle_stall = Stall.Idle
                 continue
 
         if reading_cycle and len(line) > 1 and line[1] == 'dispatched':
-            reading_cycle = False
-            if '0' in line[2]:
-                if cycle_stall == Stall.Mem_str:
-                    mem_str += 1
-                    continue
-                if cycle_stall == Stall.Mem_data:
-                    mem_data += 1
-                    continue
-                if cycle_stall == Stall.Synco:
-                    synchro += 1
-                    continue
-                if cycle_stall == Stall.Comp_str:
-                    comp_str += 1
-                    continue
-                if cycle_stall == Stall.Comp_data:
-                    comp_data += 1
-                    continue
-                if cycle_stall == Stall.Control:
-                    control += 1
-                    continue
-                if cycle_stall == Stall.Idle:
-                    idle += 1
-                    continue
-                other+=1
-
+            if '0' not in line[2]:
+                cycle_stall = Stall.No_stall
+                reading_cycle = False
+                continue
             else:
-                no_stall += 1
-                continue         
-
-    #percentages of the stalls
-    per_mem_str=mem_str/cycles*100
-    per_mem_data=mem_data/cycles*100
-    per_synchro=synchro/cycles*100
-    per_comp_str=comp_str/cycles*100
-    per_comp_data=comp_data/cycles*100
-    per_control=control/cycles*100
-    per_idle=idle/cycles*100
-    per_other=other/cycles*100
-
-    #speedup without the stall
-    speed_mem_str=cycles/(cycles-mem_str)
-    speed_mem_data=cycles/(cycles-mem_data)
-    speed_synchro=cycles/(cycles-synchro)
-    speed_comp_str=cycles/(cycles-comp_str)
-    speed_comp_data=cycles/(cycles-comp_data)
-    speed_control=cycles/(cycles-control)
-    speed_idle=cycles/(cycles-idle)
-    speed_other=cycles/(cycles-other)
-
-    outf.write("CALCULATION METHOD\n")
-    outf.write("Percetage stalls wrt total cycles: stall_type/total_cycles*100\n")
-    outf.write("Speedup without stall: total_cycles/(total_cycles-stall_type)\n")
-    outf.write("\n\n\n")
-    outf.write("Total Cycles " +str(cycles)+"\n")
-    outf.write("*********memory structural stall********\n")
-    outf.write("Number of stalls:"+str(mem_str)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_mem_str)+"\n")
-    outf.write("Speedup without stall:"+str(speed_mem_str)+"\n")
-    outf.write("*********memory data stall********\n")
-    outf.write("Number of stalls:"+str(mem_data)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_mem_data)+"\n")
-    outf.write("Speedup without stall:"+str(speed_mem_data)+"\n")
-    outf.write("*********synchronization stall********\n")
-    outf.write("Number of stalls:"+str(synchro)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_synchro)+"\n")
-    outf.write("Speedup without stall:"+str(speed_synchro)+"\n")
-    outf.write("*********compute structural stall********\n")
-    outf.write("Number of stalls:"+str(comp_str)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_comp_str)+"\n")
-    outf.write("Speedup without stall:"+str(speed_comp_str)+"\n")
-    outf.write("*********compute data stall********\n")
-    outf.write("Number of stalls:"+str(comp_data)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_comp_data)+"\n")
-    outf.write("Speedup without stall:"+str(speed_comp_data)+"\n")
-    outf.write("*********compute control stall********\n")
-    outf.write("Number of stalls:"+str(control)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_control)+"\n")
-    outf.write("Speedup without stall:"+str(speed_control)+"\n")
-    outf.write("*********idle stall********\n")
-    outf.write("Number of stalls:"+str(idle)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_idle)+"\n")
-    outf.write("Speedup without stall:"+str(speed_idle)+"\n")
-    outf.write("*********other stall********\n")
-    outf.write("Number of stalls:"+str(other)+"\n")
-    outf.write("Percetage stalls wrt total cycles:"+str(per_other)+"\n")
-    outf.write("Speedup without stall:"+str(speed_other)+"\n")
+                if cycle_stall != Stall.Idle and cycle_stall != Stall.No_stall:
+                    reading_cycle = False
+                    continue
 
 
-   
+    print("Total Cycles " +str(cycles))
+    print("MemStr: "+str(mem_str))
+    print("MemData: "+str(mem_data))
+    print("Synchro "+str(synchro))
+    print("CompStr: "+str(comp_str))
+    print("CompData: "+str(comp_data))
+    print("Control: "+str(control))
+    print("IBuffer: "+str(ibuffer))
+    print("PWrite: "+str(pwrite))
+    print("Idle: "+str(idle))
+    print("Other: "+str(other))
 
 def main():
-    data_folder = Path("/u/ls24/rodinia/cuda/nn/")
+    data_folder = Path("/scratch/ls24/shoc/src/cuda/level1/bfs")
     filename = data_folder / "stall_output.txt"
-    outfile = data_folder / "gsi_stats"
 
     fin=open(filename,"r")
-    fout=open(outfile,"w")
 
-    getstats(fin,fout)
+    getstats(fin)
 
 
 
