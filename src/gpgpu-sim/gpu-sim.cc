@@ -535,6 +535,9 @@ void shader_core_config::reg_options(class OptionParser *opp) {
                          "perfect control so that all control hazards"
                          "are resolved immediately",
                          "0");
+  option_parser_register(opp, "-gpgpu_pending_write_ignore", OPT_BOOL,
+                         &pending_write_ignore,
+                         "Ignore Pending Writes", "0");
   option_parser_register(opp, "-gpgpu_ignore_synchronization", OPT_BOOL,
                          &ignore_synchronization,
                          "Ignores synchronization (CAREFUL: may break execution)",
