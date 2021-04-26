@@ -78,8 +78,6 @@ class gpgpu_sim_wrapper {};
 #include <sstream>
 #include <string>
 
-int actw;
-
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 bool g_interactive_debugger_enabled = false;
@@ -531,6 +529,7 @@ void shader_core_config::reg_options(class OptionParser *opp) {
                          "perfect inst and const cache mode, so all inst and "
                          "const hits in the cache(default = disabled)",
                          "0");
+
   option_parser_register(
       opp, "-gpgpu_inst_fetch_throughput", OPT_INT32, &inst_fetch_throughput,
       "the number of fetched intruction per warp each cycle", "1");
@@ -1637,7 +1636,6 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
   symbol_table *symtab = kernel_func_info->get_symtab();
   unsigned ctaid = kernel.get_next_cta_id_single();
   checkpoint *g_checkpoint = new checkpoint();
-  actw = 0; 
   for (unsigned i = start_thread; i < end_thread; i++) {
     m_threadState[i].m_cta_id = free_cta_hw_id;
     unsigned warp_id = i / m_config->warp_size;
@@ -1660,7 +1658,6 @@ void shader_core_ctx::issue_block2core(kernel_info_t &kernel) {
     }
     //
     warps.set(warp_id);
-    actw =  warp_id;
   }
   assert(nthreads_in_block > 0 &&
          nthreads_in_block <=
@@ -1860,6 +1857,7 @@ void gpgpu_sim::cycle() {
 
     /*------Printing colllected stats---------*/
     max_active=actw+1;
+    actw = 0;
     if(max_warps_act<max_active)
 	    max_warps_act=max_active;
     cout<<"CYCLE "<<gpu_sim_cycle<<"\n";

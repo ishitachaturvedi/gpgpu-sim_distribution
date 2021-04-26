@@ -1180,6 +1180,10 @@ void scheduler_unit::order_by_priority(
 }
 
 void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
+  if (warp_id > actw) actw = warp_id;
+  
+  act_warp[m_shader->get_sid()][warp_id] = get_schd_id() + 1;
+  
   // Don't consider warps that are not yet valid
   if (((*m_warp)[warp_id]) == NULL || warp(warp_id).done_exit()) {
     stallData[m_shader->get_sid()][warp_id][idlew]=1;
@@ -1194,8 +1198,6 @@ void scheduler_unit::verify_stall(int warp_id, exec_unit_type_t type) {
       stallData[m_shader->get_sid()][warp_id][idlew]=1;
     return;
   }
-
-  act_warp[m_shader->get_sid()][warp_id] = get_schd_id() + 1;
   
   exec_unit_type_t previous_issued_inst_exec_type = type;
   bool diff_exec_units =
@@ -1461,7 +1463,10 @@ SCHED_DPRINTF("scheduler_unit::cycle()\n");
     }
     if ((*iter)->done_exit()) {
       if ((*iter)->get_warp_id() <= 300)
+      {
         stallData[m_shader->get_sid()][(*iter)->get_warp_id()][idlew]=1;
+        act_warp[m_shader->get_sid()][(*iter)->get_warp_id()] = get_schd_id() + 1;
+      }
       continue;
     }
     verify_stall((*iter)->get_warp_id(), exec_unit_type_t::NONE);

@@ -21,5 +21,7 @@ extern int max_sid;
 extern int num_of_schedulers;
 extern int cycle_counter;
 
+extern int actw;
+
 extern vector<vector<int>> nDispatch;
 extern vector<vector<int>> warpDispatch;
