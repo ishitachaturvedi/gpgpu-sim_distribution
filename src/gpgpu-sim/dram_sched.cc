@@ -31,6 +31,10 @@
 #include "gpu-misc.h"
 #include "gpu-sim.h"
 #include "mem_latency_stat.h"
+#include <iostream>
+#include "fast.h"
+
+using namespace std;
 
 frfcfs_scheduler::frfcfs_scheduler(const memory_config *config, dram_t *dm,
                                    memory_stats_t *stats) {
@@ -157,19 +161,33 @@ dram_req_t *frfcfs_scheduler::schedule(unsigned bank, unsigned curr_row) {
   dram_req_t *req = (*next);
 
   // rowblp stats
+  access_num_total++;
   m_dram->access_num++;
   bool is_write = req->data->is_write();
   if (is_write)
+  {
     m_dram->write_num++;
+    write_num_total++;
+  }
   else
+  {
     m_dram->read_num++;
+    read_num_total++;
+  }
 
   if (rowhit) {
     m_dram->hits_num++;
+    hits_num_total++;
     if (is_write)
+    {
       m_dram->hits_write_num++;
+      hits_write_num_total++;
+    }
     else
+    {
       m_dram->hits_read_num++;
+      hits_read_num_total++;
+    }
   }
 
   m_stats->concurrent_row_access[m_dram->id][bank]++;
@@ -205,6 +223,7 @@ void frfcfs_scheduler::print(FILE *fp) {
 }
 
 void dram_t::scheduler_frfcfs() {
+
   unsigned mrq_latency;
   frfcfs_scheduler *sched = m_frfcfs_scheduler;
   while (!mrqq->empty()) {
@@ -214,11 +233,14 @@ void dram_t::scheduler_frfcfs() {
     // if(req->data->get_type() != READ_REPLY && req->data->get_type() !=
     // WRITE_ACK)
     m_stats->total_n_access++;
+    dram_access_total++;
 
     if (req->data->get_type() == WRITE_REQUEST) {
       m_stats->total_n_writes++;
+      dram_write_req_total++;
     } else if (req->data->get_type() == READ_REQUEST) {
       m_stats->total_n_reads++;
+      dram_read_req_total++;
     }
 
     req->data->set_status(IN_PARTITION_MC_INPUT_QUEUE,

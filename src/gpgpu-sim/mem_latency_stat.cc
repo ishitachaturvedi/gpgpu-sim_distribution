@@ -38,6 +38,7 @@
 #include "shader.h"
 #include "stat-tool.h"
 #include "visualizer.h"
+#include "fast.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -212,7 +213,9 @@ void memory_stats_t::memlatstat_read_done(mem_fetch *mf) {
     unsigned icnt2sh_latency;
     icnt2sh_latency = (m_gpu->gpu_tot_sim_cycle + m_gpu->gpu_sim_cycle) -
                       mf->get_return_timestamp();
+    icnt_mem_total_time_spend_Ishita = icnt_mem_total_time_spend_Ishita + icnt2sh_latency;
     tot_icnt2sh_latency += icnt2sh_latency;
+    icnt2sh_latency_tot += icnt2sh_latency;
     icnt2sh_lat_table[LOGB2(icnt2sh_latency)]++;
     if (icnt2sh_latency > max_icnt2sh_latency)
       max_icnt2sh_latency = icnt2sh_latency;
@@ -251,6 +254,7 @@ void memory_stats_t::memlatstat_icnt2mem_pop(mem_fetch *mf) {
     icnt2mem_latency =
         (m_gpu->gpu_tot_sim_cycle + m_gpu->gpu_sim_cycle) - mf->get_timestamp();
     tot_icnt2mem_latency += icnt2mem_latency;
+    icnt2mem_latency_tot += icnt2mem_latency;
     icnt2mem_lat_table[LOGB2(icnt2mem_latency)]++;
     if (icnt2mem_latency > max_icnt2mem_latency)
       max_icnt2mem_latency = icnt2mem_latency;
@@ -261,7 +265,9 @@ void memory_stats_t::memlatstat_lat_pw() {
   if (mf_num_lat_pw && m_memory_config->gpgpu_memlatency_stat) {
     assert(mf_tot_lat_pw);
     mf_total_lat += mf_tot_lat_pw;
+    mf_total_lat_tot += mf_tot_lat_pw;
     num_mfs += mf_num_lat_pw;
+    num_mfs_tot += mf_num_lat_pw;
     mf_lat_pw_table[LOGB2(mf_tot_lat_pw / mf_num_lat_pw)]++;
     mf_tot_lat_pw = 0;
     mf_num_lat_pw = 0;
@@ -346,7 +352,10 @@ void memory_stats_t::memlatstat_print(unsigned n_mem, unsigned gpu_mem_n_bk) {
       printf("dram[%d]: ", i);
       for (j = 0; j < gpu_mem_n_bk; j++) {
         total_row_accesses += row_access[i][j];
+        total_row_accesses_NET += row_access[i][j];
         total_num_activates += num_activates[i][j];
+        total_num_activates_NET += num_activates[i][j];
+
         printf("%9f ", (float)row_access[i][j] / num_activates[i][j]);
       }
       printf("\n");
@@ -406,6 +415,7 @@ void memory_stats_t::memlatstat_print(unsigned n_mem, unsigned gpu_mem_n_bk) {
         if (l < min_bank_accesses) min_bank_accesses = l;
         if (l > max_bank_accesses) max_bank_accesses = l;
         k += l;
+        tot_DRAM_reads += l;
         m += l;
         printf("%9d ", l);
       }
@@ -442,6 +452,7 @@ void memory_stats_t::memlatstat_print(unsigned n_mem, unsigned gpu_mem_n_bk) {
         if (l < min_bank_accesses) min_bank_accesses = l;
         if (l > max_bank_accesses) max_bank_accesses = l;
         k += l;
+        tot_DRAM_writes += l;
         m += l;
         printf("%9d ", l);
       }

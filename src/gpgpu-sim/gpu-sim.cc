@@ -65,6 +65,7 @@
 #include "power_stat.h"
 #include "stats.h"
 #include "visualizer.h"
+#include "fast.h"
 
 #ifdef GPGPUSIM_POWER_MODEL
 #include "power_interface.h"
@@ -282,6 +283,42 @@ void shader_core_config::reg_options(class OptionParser *opp) {
   option_parser_register(opp, "-gpgpu_perfect_mem", OPT_BOOL,
                          &gpgpu_perfect_mem,
                          "enable perfect memory mode (no cache miss)", "0");
+
+  option_parser_register(opp, "-gpgpu_perfect_mem_data", OPT_BOOL,
+                         &gpgpu_perfect_mem_data,
+                         "no wait for data on scoreboard", "0");
+
+  option_parser_register(opp, "-gpgpu_write_sched_order", OPT_BOOL,
+                         &gpgpu_write_sched_order,
+                         "write order in which warps were executed in file", "0");
+
+                        if(gpgpu_write_sched_order)
+                          write_warps.open("warp_order_normal.txt");
+
+  option_parser_register(opp, "-gpgpu_follow_defined_sched_order", OPT_BOOL,
+                         &gpgpu_follow_defined_sched_order,
+                         "follow sched order written in file", "0");
+
+  option_parser_register(opp, "-gpgpu_print_stall_data", OPT_BOOL,
+                         &gpgpu_print_stall_data,
+                         "Print verbose stall data per cycle", "0");
+
+  option_parser_register(opp, "-gpgpu_print_cout_statements", OPT_BOOL,
+                         &gpgpu_print_cout_statements,
+                         "Print verbose stall data per cycle", "0");
+
+  option_parser_register(opp, "-gpgpu_sched_all_warps", OPT_BOOL,
+                         &gpgpu_sched_all_warps,
+                         "All schedulers see all warps", "0");
+
+  option_parser_register(opp, "-gpgpu_reply_buffer", OPT_BOOL,
+                         &gpgpu_reply_buffer,
+                         "Replay instructions which could not be executed later", "0");
+
+  option_parser_register(opp, "-gpgpu_reply_buffer_seperate_mem_comp", OPT_BOOL,
+                         &gpgpu_reply_buffer_seperate_mem_comp,
+                         "Replay instructions which could not be executed later", "0");
+
   option_parser_register(
       opp, "-n_regfile_gating_group", OPT_UINT32, &n_regfile_gating_group,
       "group of lanes that should be read/written together)", "4");
@@ -528,6 +565,18 @@ void shader_core_config::reg_options(class OptionParser *opp) {
                          &perfect_inst_const_cache,
                          "perfect inst and const cache mode, so all inst and "
                          "const hits in the cache(default = disabled)",
+                         "0");
+  option_parser_register(opp, "-gpgpu_perfect_control", OPT_BOOL,
+                         &perfect_control,
+                         "perfect control so that all control hazards"
+                         "are resolved immediately",
+                         "0");
+  option_parser_register(opp, "-gpgpu_pending_write_ignore", OPT_BOOL,
+                         &pending_write_ignore,
+                         "Ignore Pending Writes", "0");
+  option_parser_register(opp, "-gpgpu_ignore_synchronization", OPT_BOOL,
+                         &ignore_synchronization,
+                         "Ignores synchronization (CAREFUL: may break execution)",
                          "0");
   option_parser_register(
       opp, "-gpgpu_inst_fetch_throughput", OPT_INT32, &inst_fetch_throughput,
@@ -1241,6 +1290,9 @@ void gpgpu_sim::gpu_print_stat() {
   printf("gpu_sim_insn = %lld\n", gpu_sim_insn);
   printf("gpu_ipc = %12.4f\n", (float)gpu_sim_insn / gpu_sim_cycle);
   printf("gpu_tot_sim_cycle = %lld\n", gpu_tot_sim_cycle + gpu_sim_cycle);
+  printf("gpu_tot_stall_cycle = %d\n",stall_cycles);
+  printf("tot_cycles_exec_all_SM = %d\n",tot_cycles_exec_all_SM);
+  printf("cycles_passed = %d\n",cycles_passed);
   printf("gpu_tot_sim_insn = %lld\n", gpu_tot_sim_insn + gpu_sim_insn);
   printf("gpu_tot_ipc = %12.4f\n", (float)(gpu_tot_sim_insn + gpu_sim_insn) /
                                        (gpu_tot_sim_cycle + gpu_sim_cycle));
@@ -1351,19 +1403,34 @@ void gpgpu_sim::gpu_print_stat() {
               (double)l2_css.misses / (double)l2_css.accesses,
               l2_css.pending_hits, l2_css.res_fails);
 
+      l2_cache_bank_access = l2_cache_bank_access + l2_css.accesses;
+      l2_cache_bank_miss = l2_cache_bank_miss + l2_css.misses;
       total_l2_css += l2_css;
     }
     if (!m_memory_config->m_L2_config.disabled() &&
         m_memory_config->m_L2_config.get_num_lines()) {
       // L2c_print_cache_stat();
       printf("L2_total_cache_accesses = %llu\n", total_l2_css.accesses);
+      L2_total_cache_accesses += total_l2_css.accesses;
       printf("L2_total_cache_misses = %llu\n", total_l2_css.misses);
+      L2_total_cache_misses += total_l2_css.misses;
+      l2_cache_access = l2_cache_access + total_l2_css.accesses;
+      L2_cache_access_total_Ishita = L2_cache_access_total_Ishita + total_l2_css.accesses; 
+      l2_cache_miss = l2_cache_miss + total_l2_css.misses;
+      L2_cache_access_miss_Ishita = L2_cache_access_miss_Ishita + total_l2_css.misses; 
+      L2_cache_access_pending_Ishita = L2_cache_access_pending_Ishita + total_l2_css.pending_hits; 
+      l2_pending = l2_pending + total_l2_css.pending_hits;
+      L2_cache_access_resfail_Ishita = L2_cache_access_resfail_Ishita + total_l2_css.res_fails;
+      l2_res_fail = l2_res_fail + total_l2_css.res_fails;
+      L2_cache_access_resfail_Ishita = L2_cache_access_resfail_Ishita + total_l2_css.res_fails;
       if (total_l2_css.accesses > 0)
         printf("L2_total_cache_miss_rate = %.4lf\n",
                (double)total_l2_css.misses / (double)total_l2_css.accesses);
       printf("L2_total_cache_pending_hits = %llu\n", total_l2_css.pending_hits);
+      L2_total_cache_pending_hits += total_l2_css.pending_hits;
       printf("L2_total_cache_reservation_fails = %llu\n",
              total_l2_css.res_fails);
+      L2_total_cache_reservation_fails += total_l2_css.res_fails;
       printf("L2_total_cache_breakdown:\n");
       l2_stats.print_stats(stdout, "L2_cache_stats_breakdown");
       printf("L2_total_cache_reservation_fail_breakdown:\n");
@@ -1738,6 +1805,8 @@ unsigned long long g_single_step =
     0;  // set this in gdb to single step the pipeline
 
 void gpgpu_sim::cycle() {
+  print_stall_data = m_shader_config->gpgpu_print_cout_statements;
+
   int clock_mask = next_clock_domain();
 
   if (clock_mask & CORE) {
@@ -1756,16 +1825,33 @@ void gpgpu_sim::cycle() {
         if (::icnt_has_buffer(m_shader_config->mem2device(i), response_size)) {
           // if (!mf->get_is_write())
           mf->set_return_timestamp(gpu_sim_cycle + gpu_tot_sim_cycle);
+          if(!mf->get_inst().empty() && print_stall_data)
+          {
+            cout <<"ICNT_PUSH_FROM_MEM_ENTER "<<mf->get_inst().pc<<" "<<mf->get_inst().warp_id()<<" "<<mf->get_inst().get_sid()<<" "<<cycles_passed<<" "<<going_from_shader_to_mem<<"\n";
+          }
           mf->set_status(IN_ICNT_TO_SHADER, gpu_sim_cycle + gpu_tot_sim_cycle);
           ::icnt_push(m_shader_config->mem2device(i), mf->get_tpc(), mf,
                       response_size);
           m_memory_sub_partition[i]->pop();
+          if(mf)
+          {
+            icnt_back_to_shader = icnt_back_to_shader + cycles_passed - (const_cast<mem_fetch *>(mf))->get_cycle_issued();
+            (const_cast<mem_fetch *>(mf))->set_cycle_issued(cycles_passed);
+          }
+          if(mf && mf->get_inst().space.get_type() == global_space && mf->get_inst().is_load() && print_stall_data)
+           cout << "PUSHING_GLOBAL_MEM_POP_FROM_L2_ICNT "<<mf->get_inst().pc<<" "<<mf->get_inst().warp_id()<<" "<<mf->get_inst().get_sid()<<" "<<cycles_passed<<"\n";
           partiton_replys_in_parallel_per_cycle++;
         } else {
           gpu_stall_icnt2sh++;
+          gpu_stall_icnt2sh_total++;
         }
       } else {
         m_memory_sub_partition[i]->pop();
+        if(mf)
+        {
+          icnt_back_to_shader = icnt_back_to_shader + cycles_passed - mf->get_cycle_issued();
+          mf->set_cycle_issued(cycles_passed);
+        }
       }
     }
   }
@@ -1802,10 +1888,21 @@ void gpgpu_sim::cycle() {
       // SECTOR_CHUNCK_SIZE requests, so ensure you have enough buffer for them
       if (m_memory_sub_partition[i]->full(SECTOR_CHUNCK_SIZE)) {
         gpu_stall_dramfull++;
+        gpu_stall_dramfull_total++;
       } else {
         mem_fetch *mf = (mem_fetch *)icnt_pop(m_shader_config->mem2device(i));
         m_memory_sub_partition[i]->push(mf, gpu_sim_cycle + gpu_tot_sim_cycle);
         if (mf) partiton_reqs_in_parallel_per_cycle++;
+        if(mf)
+        {
+          pushed_from_shader_icnt_l2_icnt = pushed_from_shader_icnt_l2_icnt + cycles_passed - mf->get_cycle_issued();
+          mf->set_cycle_issued(cycles_passed);
+          going_from_shader_to_mem--;
+          ICNT_TO_MEM_count = ICNT_TO_MEM_count + 1;
+          ICNT_TO_MEM_cycles = gpu_sim_cycle + gpu_tot_sim_cycle - mf->get_status_change_cycle() + ICNT_TO_MEM_cycles;
+          if(print_stall_data)
+            cout <<"ICNT_PUSH_TO_MEM_EXIT "<<mf->get_inst().pc<<" "<<mf->get_inst().warp_id()<<" "<<mf->get_inst().get_sid()<<" "<<gpu_sim_cycle + gpu_tot_sim_cycle - mf->get_status_change_cycle()<<" "<<going_from_shader_to_mem<<"\n";
+        }
       }
       m_memory_sub_partition[i]->cache_cycle(gpu_sim_cycle + gpu_tot_sim_cycle);
       m_memory_sub_partition[i]->accumulate_L2cache_stats(
@@ -1853,7 +1950,70 @@ void gpgpu_sim::cycle() {
         ((gpu_sim_cycle + gpu_tot_sim_cycle) >= g_single_step)) {
       raise(SIGTRAP);  // Debug breakpoint
     }
+
+    /*------Printing colllected stats---------*/
+    max_active=actw+1;
+    actw = 0;
+    if(max_warps_act<max_active)
+	    max_warps_act=max_active;
+    if(m_shader_config->gpgpu_print_stall_data)
+    {
+      cout<<"CYCLE "<<gpu_sim_cycle<<" "<<cycles_passed<<"\n";
+      cout<<"max shader "<<max_sid<<"\n";
+    }
+
+    for(int k=0;k<max_sid+1;k++)
+    {
+      if(m_shader_config->gpgpu_print_stall_data)
+      {
+        cout<<"SID "<<k<<"\n";
+        cout<<"Active ";
+        for(int i=0;i<max_active;i++)
+        {
+          cout<<act_warp[k][i]<<" ";
+        }
+        cout << "\n";
+      }
+
+      for(int s=0; s<num_of_schedulers; s++)
+      {
+        if(m_shader_config->gpgpu_print_stall_data)
+        {
+          cout<<"SCHEDULER " << s << "\n";
+          cout << "Struct avail ";
+          for (int i = 0; i < 8; i++)
+          {
+            cout << str_status[k][s][i] <<" ";
+          }
+        }
+        if(m_shader_config->gpgpu_print_stall_data)
+          cout << "\n";
+        for(int i=0;i<max_active;i++)
+        {
+          //if (act_warp[k][i] == (s+1))
+          {
+            if(m_shader_config->gpgpu_print_stall_data)
+              cout<<"warp "<<i<<" ";  //Ishita
+            for(int j=0;j<numstall;j++)
+            {
+              if(m_shader_config->gpgpu_print_stall_data)
+                cout<<stallData[k][i][j]<< " ";
+              stallData[k][i][j]=0;
+            }
+            if(m_shader_config->gpgpu_print_stall_data)
+              cout<<"\n";
+          }
+        }
+      }
+
+      if(m_shader_config->gpgpu_print_stall_data)  //Ishita
+        cout<<"****************\n";
+    }
+
     gpu_sim_cycle++;
+    cycles_passed++;
+
+    present_ongoing_cycle = gpu_tot_sim_cycle + gpu_sim_cycle;
 
     if (g_interactive_debugger_enabled) gpgpu_debug();
 

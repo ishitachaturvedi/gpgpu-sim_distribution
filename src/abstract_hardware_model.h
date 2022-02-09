@@ -405,7 +405,7 @@ class simt_stack {
   void launch(address_type start_pc, const simt_mask_t &active_mask);
   void update(simt_mask_t &thread_done, addr_vector_t &next_pc,
               address_type recvg_pc, op_type next_inst_op,
-              unsigned next_inst_size, address_type next_inst_pc);
+              unsigned next_inst_size, address_type next_inst_pc, int warpId);
 
   const simt_mask_t &get_active_mask() const;
   void get_pdom_stack_top_info(unsigned *pc, unsigned *rpc) const;
@@ -722,10 +722,10 @@ class memory_space_t {
                     // manual, sec. 5.1.3)
 };
 
-const unsigned MAX_MEMORY_ACCESS_SIZE = 128;
+const unsigned MAX_MEMORY_ACCESS_SIZE = 128; // change_Ishita 128
 typedef std::bitset<MAX_MEMORY_ACCESS_SIZE> mem_access_byte_mask_t;
-const unsigned SECTOR_CHUNCK_SIZE = 4;  // four sectors
-const unsigned SECTOR_SIZE = 32;        // sector is 32 bytes width
+const unsigned SECTOR_CHUNCK_SIZE = 4;  // four sectors  // change_Ishita 4
+const unsigned SECTOR_SIZE = 32;        // sector is 32 bytes width 32
 typedef std::bitset<SECTOR_CHUNCK_SIZE> mem_access_sector_mask_t;
 #define NO_PARTIAL_WRITE (mem_access_byte_mask_t())
 
@@ -1011,8 +1011,12 @@ class warp_inst_t : public inst_t {
     m_is_printf = false;
     m_is_cdp = 0;
     should_do_atomic = true;
+    m_sid = -1;
   }
   virtual ~warp_inst_t() {}
+
+  unsigned get_sid() const { return m_sid; }
+  void set_sid(int sid) { m_sid = sid; }
 
   // modifiers
   void broadcast_barrier_reduction(const active_mask_t &access_mask);
@@ -1021,6 +1025,12 @@ class warp_inst_t : public inst_t {
   void clear() { m_empty = true; }
 
   void issue(const active_mask_t &mask, unsigned warp_id,
+             unsigned long long cycle, int dynamic_warp_id, int sch_id);
+
+  void issue_push_to_replay(const active_mask_t &mask, unsigned warp_id,
+             unsigned long long cycle, int dynamic_warp_id, int sch_id);
+
+  void issue_push_from_replay(const active_mask_t &mask, unsigned warp_id,
              unsigned long long cycle, int dynamic_warp_id, int sch_id);
 
   const active_mask_t &get_active_mask() const { return m_warp_active_mask; }
@@ -1057,7 +1067,7 @@ class warp_inst_t : public inst_t {
     }
   }
   struct transaction_info {
-    std::bitset<4> chunks;  // bitmask: 32-byte chunks accessed
+    std::bitset<4> chunks;  // bitmask: 32-byte chunks accessed  // changed_Ishita 4
     mem_access_byte_mask_t bytes;
     active_mask_t active;  // threads in this transaction
 
@@ -1152,8 +1162,15 @@ class warp_inst_t : public inst_t {
   unsigned get_schd_id() const { return m_scheduler_id; }
   active_mask_t get_warp_active_mask() const { return m_warp_active_mask; }
 
+  void set_cycle_issued(int cycle) { cycle_issued = cycle; }
+  int get_cycle_issued() const { return cycle_issued; }
+
+  void set_cycle_issued_warp(int cycle) { warp_issued_cycle = cycle; }
+  int get_cycle_issued_warp() const { return warp_issued_cycle; }
+
  protected:
   unsigned m_uid;
+  unsigned m_sid;
   bool m_empty;
   bool m_cache_hit;
   unsigned long long issue_cycle;
@@ -1164,6 +1181,8 @@ class warp_inst_t : public inst_t {
   unsigned m_warp_id;
   unsigned m_dynamic_warp_id;
   const core_config *m_config;
+  int cycle_issued;
+  int warp_issued_cycle;
   active_mask_t m_warp_active_mask;  // dynamic active mask for timing model
                                      // (after predication)
   active_mask_t
@@ -1247,6 +1266,17 @@ class core_t {
     return m_gpu;
   }
   void execute_warp_inst_t(warp_inst_t &inst, unsigned warpId = (unsigned)-1);
+
+  // only updates if PC was last PC to execute for fetch to be correct 
+  // Executed when pushing instruction from normal queue to OOO (replay) queue
+  void execute_warp_inst_t_updatePCOnly(warp_inst_t &inst, unsigned warpId = (unsigned)-1);
+
+  // executes the inst, does not update any PC information, executed when pushing instruction out 
+  // of OOO (replay) queue
+  void execute_warp_inst_t_ExecInstOnly(warp_inst_t &inst, unsigned warpId = (unsigned)-1);
+
+  bool isSyncInstExec(const warp_inst_t *inst, int warp_num);
+
   bool ptx_thread_done(unsigned hw_thread_id) const;
   virtual void updateSIMTStack(unsigned warpId, warp_inst_t *inst);
   void initilizeSIMTStack(unsigned warp_count, unsigned warps_size);
@@ -1370,6 +1400,29 @@ class register_set {
     assert(reg_id < regs.size());
     if (regs[reg_id]->empty()) {
       return &regs[reg_id];
+    }
+    assert(0 && "No free register found");
+    return NULL;
+  }
+
+  int get_free_id() {
+    for (unsigned i = 0; i < regs.size(); i++) {
+      if (regs[i]->empty()) {
+        return i;
+      }
+    }
+    assert(0 && "No free registers found");
+    return NULL;
+  }
+
+  int get_free_id(bool sub_core_model, unsigned reg_id) {
+    // in subcore model, each sched has a one specific reg to use (based on
+    // sched id)
+    if (!sub_core_model) return get_free_id();
+
+    assert(reg_id < regs.size());
+    if (regs[reg_id]->empty()) {
+      return reg_id;
     }
     assert(0 && "No free register found");
     return NULL;

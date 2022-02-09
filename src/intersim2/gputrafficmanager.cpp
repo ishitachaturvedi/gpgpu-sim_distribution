@@ -32,6 +32,7 @@
 #include "gputrafficmanager.hpp"
 #include "interconnect_interface.hpp"
 #include "globals.hpp"
+#include "../gpgpu-sim/fast.h"
 
 
 GPUTrafficManager::GPUTrafficManager( const Configuration &config, const vector<Network *> &net)
@@ -642,6 +643,39 @@ void GPUTrafficManager::_Step()
         Flit * const f = iter->second;
 
         f->atime = _time;
+
+        icnt_creat_inj  = icnt_creat_inj + (f->itime - f->ctime);
+        icnt_creat_arrival = icnt_creat_arrival + (f->atime - f->ctime);
+        icnt_inj_arrival = icnt_inj_arrival + (f->atime - f->itime);
+
+        if(f->type == Flit::READ_REQUEST)
+        {
+          icnt_creat_inj_READ_REQUEST  = icnt_creat_inj_READ_REQUEST + (f->itime - f->ctime);
+          icnt_creat_arrival_READ_REQUEST = icnt_creat_arrival_READ_REQUEST + (f->atime - f->ctime);
+          icnt_inj_arrival_READ_REQUEST = icnt_inj_arrival_READ_REQUEST + (f->atime - f->itime);
+        }
+
+        if(f->type == Flit::WRITE_REQUEST)
+        {
+          icnt_creat_inj_WRITE_REQUEST  = icnt_creat_inj_WRITE_REQUEST + (f->itime - f->ctime);
+          icnt_creat_arrival_WRITE_REQUEST = icnt_creat_arrival_WRITE_REQUEST + (f->atime - f->ctime);
+          icnt_inj_arrival_WRITE_REQUEST = icnt_inj_arrival_WRITE_REQUEST + (f->atime - f->itime);
+        }
+
+        if(f->type == Flit::READ_REPLY)
+        {
+          icnt_creat_inj_READ_REPLY  = icnt_creat_inj_READ_REPLY + (f->itime - f->ctime);
+          icnt_creat_arrival_READ_REPLY = icnt_creat_arrival_READ_REPLY + (f->atime - f->ctime);
+          icnt_inj_arrival_READ_REPLY = icnt_inj_arrival_READ_REPLY + (f->atime - f->itime);
+        }
+
+        if(f->type == Flit::WRITE_REPLY)
+        {
+          icnt_creat_inj_WRITE_REPLY  = icnt_creat_inj_WRITE_REPLY + (f->itime - f->ctime);
+          icnt_creat_arrival_WRITE_REPLY = icnt_creat_arrival_WRITE_REPLY + (f->atime - f->ctime);
+          icnt_inj_arrival_WRITE_REPLY = icnt_inj_arrival_WRITE_REPLY + (f->atime - f->itime);
+        }
+
         if(f->watch) {
           *gWatchOut << GetSimTime() << " | "
           << "node" << n << " | "

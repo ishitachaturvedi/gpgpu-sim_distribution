@@ -83,6 +83,11 @@ enum exec_unit_type_t {
   SPECIALIZED = 7
 };
 
+enum INST_TYPE {
+    MEM_INST = 0,
+    COMP_INST,
+  };
+
 class thread_ctx_t {
  public:
   unsigned m_cta_id;  // hardware CTA this thread belongs
@@ -118,6 +123,12 @@ class shd_warp_t {
     m_last_fetch = 0;
     m_next = 0;
 
+    replay_m_next = 0;
+    replay_m_fill_next = 0;
+
+    replay_m_next_mem = 0;
+    replay_m_fill_next_mem = 0;
+
     // Jin: cdp support
     m_cdp_latency = 0;
     m_cdp_dummy = false;
@@ -142,6 +153,10 @@ class shd_warp_t {
 
   bool functional_done() const;
   bool waiting();  // not const due to membar
+  bool check_waiting();
+  bool waiting_barrier();
+  bool waiting_fence();
+  bool waiting_idle();
   bool hardware_done() const;
 
   bool done_exit() const { return m_done_exit; }
@@ -204,6 +219,206 @@ class shd_warp_t {
   }
   void ibuffer_step() { m_next = (m_next + 1) % IBUFFER_SIZE; }
 
+  // additional ibuffer functions 
+
+  int ibuffer_count() const {
+    int counter = 0;
+    for (unsigned i = 0; i < IBUFFER_SIZE; i++)
+      if (m_ibuffer[i].m_valid) 
+        counter = counter + 1;
+    return counter;
+  }
+
+  const warp_inst_t *ibuffer_check_indep_inst() {
+    int next = (m_next + 1) % IBUFFER_SIZE;
+    return m_ibuffer[next].m_inst;
+  }
+
+  void ibuffer_contents()
+  {
+    for (unsigned i = 0; i < IBUFFER_SIZE; i++)
+    {
+      if (m_ibuffer[i].m_valid) 
+        std::cout <<"IBUFFER_CONTENT_VALID "<<i<<" "<<m_ibuffer[i].m_valid<<" "<<m_ibuffer[i].m_inst->pc<<"\n";
+      else
+        std::cout <<"IBUFFER_CONTENT_INVALID "<<i<<" "<<m_ibuffer[i].m_valid<<"\n";
+    }
+  }
+
+  // REPLAY BUFFER FUNCTIONS
+
+  void replay_buffer_fill(unsigned slot, const warp_inst_t *pI, int PC) {
+    assert(slot < REPLAY_BUFFER_SIZE);
+    replay_buffer[slot].m_inst = pI;
+    replay_buffer[slot].m_valid = true;
+    replay_buffer[slot].m_pc = PC;
+    //replay_m_next = 0;
+    if(replay_m_fill_next + 1 < REPLAY_BUFFER_SIZE)
+      replay_m_fill_next = replay_m_fill_next + 1;
+    else
+      replay_m_fill_next = 0;
+  }
+
+  int replay_buffer_empty_idx() {
+    // for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++)
+    //   if (!replay_buffer[i].m_valid)
+    //     return i;
+    if(!replay_buffer[replay_m_fill_next].m_valid)
+      return replay_m_fill_next;
+    return -1;
+  }
+
+  int replay_buffer_count() const {
+    int counter = 0;
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++)
+      if (replay_buffer[i].m_valid) 
+        counter = counter + 1;
+    return counter;
+  }
+
+  bool replay_buffer_empty() const {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++)
+      if (replay_buffer[i].m_valid) return false;
+    return true;
+  }
+  void replay_buffer_flush() {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++) {
+      if (replay_buffer[i].m_valid) dec_inst_in_pipeline();
+      replay_buffer[i].m_inst = NULL;
+      replay_buffer[i].m_valid = false;
+      replay_buffer[replay_m_next].m_pc = NULL;
+    }
+  }
+
+  const warp_inst_t *replay_buffer_next_inst() { return replay_buffer[replay_m_next].m_inst; }
+  int replay_buffer_next_pc() { return replay_buffer[replay_m_next].m_pc; }
+  bool replay_buffer_next_valid() { return replay_buffer[replay_m_next].m_valid; }
+  void replay_buffer_free() {
+    replay_buffer[replay_m_next].m_inst = NULL;
+    replay_buffer[replay_m_next].m_valid = false;
+    replay_buffer[replay_m_next].m_pc = NULL;
+  }
+  
+  //void replay_buffer_step() { replay_m_next = (replay_m_next + 1) % REPLAY_BUFFER_SIZE; }
+
+  void replay_buffer_step() { 
+    if(replay_m_next + 1 < REPLAY_BUFFER_SIZE)
+      replay_m_next = replay_m_next + 1;
+    else  
+      replay_m_next = 0;
+  }
+
+  std::vector<const warp_inst_t *> get_Replay_buffer_Inst()  {
+    std::vector<const warp_inst_t *> replayInst;
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++) {
+      if (replay_buffer[i].m_valid)
+      {
+        replayInst.push_back(replay_buffer[i].m_inst);
+      }
+    }
+    return replayInst;
+  }
+
+  void replay_buffer_contents()
+  {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++)
+    {
+      if (replay_buffer[i].m_valid) 
+        std::cout <<"IBUFFER_CONTENT_VALID "<<i<<" "<<replay_buffer[i].m_valid<<" "<<replay_buffer[i].m_inst->pc<<" "<<replay_m_next<<"\n";
+      else
+        std::cout <<"IBUFFER_CONTENT_INVALID "<<i<<" "<<replay_buffer[i].m_valid<<" "<<replay_m_next<<"\n";
+    }
+  }
+
+  // end of REPLAY BUFFER FUNCTIONS
+
+  // REPLAY MEM REPLAY BUFFER FUNCTIONS
+
+  void replay_buffer_fill_mem(unsigned slot, const warp_inst_t *pI, int PC) {
+    assert(slot < REPLAY_BUFFER_SIZE_MEM);
+    replay_buffer_mem[slot].m_inst = pI;
+    replay_buffer_mem[slot].m_valid = true;
+    replay_buffer_mem[slot].m_pc = PC;
+    //replay_m_next = 0;
+    if(replay_m_fill_next_mem + 1 < REPLAY_BUFFER_SIZE_MEM)
+      replay_m_fill_next_mem = replay_m_fill_next_mem + 1;
+    else
+      replay_m_fill_next_mem = 0;
+  }
+
+  int replay_buffer_empty_idx_mem() {
+    // for (unsigned i = 0; i < REPLAY_BUFFER_SIZE; i++)
+    //   if (!replay_buffer[i].m_valid)
+    //     return i;
+    if(!replay_buffer_mem[replay_m_fill_next_mem].m_valid)
+      return replay_m_fill_next_mem;
+    return -1;
+  }
+
+  int replay_buffer_count_mem() const {
+    int counter = 0;
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE_MEM; i++)
+      if (replay_buffer_mem[i].m_valid) 
+        counter = counter + 1;
+    return counter;
+  }
+
+  bool replay_buffer_empty_mem() const {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE_MEM; i++)
+      if (replay_buffer_mem[i].m_valid) return false;
+    return true;
+  }
+  void replay_buffer_flush_mem() {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE_MEM; i++) {
+      if (replay_buffer_mem[i].m_valid) dec_inst_in_pipeline();
+      replay_buffer_mem[i].m_inst = NULL;
+      replay_buffer_mem[i].m_valid = false;
+      replay_buffer_mem[replay_m_next_mem].m_pc = NULL;
+    }
+  }
+
+  const warp_inst_t *replay_buffer_next_inst_mem() { return replay_buffer_mem[replay_m_next_mem].m_inst; }
+  int replay_buffer_next_pc_mem() { return replay_buffer_mem[replay_m_next_mem].m_pc; }
+  bool replay_buffer_next_valid_mem() { return replay_buffer_mem[replay_m_next_mem].m_valid; }
+  void replay_buffer_free_mem() {
+    replay_buffer_mem[replay_m_next_mem].m_inst = NULL;
+    replay_buffer_mem[replay_m_next_mem].m_valid = false;
+    replay_buffer_mem[replay_m_next_mem].m_pc = NULL;
+  }
+  
+  //void replay_buffer_step() { replay_m_next = (replay_m_next + 1) % REPLAY_BUFFER_SIZE; }
+
+  void replay_buffer_step_mem() { 
+    if(replay_m_next_mem + 1 < REPLAY_BUFFER_SIZE_MEM)
+      replay_m_next_mem = replay_m_next_mem + 1;
+    else  
+      replay_m_next_mem = 0;
+  }
+
+  std::vector<const warp_inst_t *> get_Replay_buffer_Inst_mem()  {
+    std::vector<const warp_inst_t *> replayInst;
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE_MEM; i++) {
+      if (replay_buffer_mem[i].m_valid)
+      {
+        replayInst.push_back(replay_buffer_mem[i].m_inst);
+      }
+    }
+    return replayInst;
+  }
+
+  void replay_buffer_contents_mem()
+  {
+    for (unsigned i = 0; i < REPLAY_BUFFER_SIZE_MEM; i++)
+    {
+      if (replay_buffer_mem[i].m_valid) 
+        std::cout <<"IBUFFER_CONTENT_VALID "<<i<<" "<<replay_buffer_mem[i].m_valid<<" "<<replay_buffer_mem[i].m_inst->pc<<" "<<replay_m_next_mem<<"\n";
+      else
+        std::cout <<"IBUFFER_CONTENT_INVALID "<<i<<" "<<replay_buffer_mem[i].m_valid<<" "<<replay_m_next_mem<<"\n";
+    }
+  }
+
+  // end of MEM REPLAY BUFFER FUNCTIONS
+
   bool imiss_pending() const { return m_imiss_pending; }
   void set_imiss_pending() { m_imiss_pending = true; }
   void clear_imiss_pending() { m_imiss_pending = false; }
@@ -241,6 +456,8 @@ class shd_warp_t {
   class shader_core_ctx * get_shader() { return m_shader; }
  private:
   static const unsigned IBUFFER_SIZE = 2;
+  static const unsigned REPLAY_BUFFER_SIZE = 1;
+  static const unsigned REPLAY_BUFFER_SIZE_MEM = 1;
   class shader_core_ctx *m_shader;
   unsigned m_cta_id;
   unsigned m_warp_id;
@@ -262,9 +479,37 @@ class shd_warp_t {
     bool m_valid;
   };
 
+  struct replay_buffer_entry {
+    replay_buffer_entry() {
+      m_valid = false;
+      m_inst = NULL;
+      m_pc = NULL;
+    }
+    const warp_inst_t *m_inst;
+    bool m_valid;
+    int m_pc;
+  };
+
+  struct replay_buffer_entry_mem {
+    replay_buffer_entry_mem() {
+      m_valid = false;
+      m_inst = NULL;
+      m_pc = NULL;
+    }
+    const warp_inst_t *m_inst;
+    bool m_valid;
+    int m_pc;
+  };
+
   warp_inst_t m_inst_at_barrier;
   ibuffer_entry m_ibuffer[IBUFFER_SIZE];
+  replay_buffer_entry replay_buffer[REPLAY_BUFFER_SIZE];
+  replay_buffer_entry_mem replay_buffer_mem[REPLAY_BUFFER_SIZE_MEM];
   unsigned m_next;
+  unsigned replay_m_next;
+  unsigned replay_m_fill_next;
+  unsigned replay_m_next_mem;
+  unsigned replay_m_fill_next_mem;
 
   unsigned m_n_atomic;  // number of outstanding atomic operations
   bool m_membar;        // if true, warp is waiting at memory barrier
@@ -320,6 +565,7 @@ enum concrete_scheduler {
   CONCRETE_SCHEDULER_TWO_LEVEL_ACTIVE,
   CONCRETE_SCHEDULER_WARP_LIMITING,
   CONCRETE_SCHEDULER_OLDEST_FIRST,
+  CONCRETE_SCHEDULER_FAST,
   NUM_CONCRETE_SCHEDULERS
 };
 
@@ -359,7 +605,14 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
   // all the derived schedulers.  The scheduler's behaviour can be
   // modified by changing the contents of the m_next_cycle_prioritized_warps
   // list.
-  void cycle();
+  void cycle(int m_cluster_id);
+
+  void verify_stall(int warp_id, exec_unit_type_t type);
+  bool replay_buffer_cycle(int m_cluster_id, int MEM_ON, int mem_data_stall_test, int comp_data_stall_test, int ibuffer_stall_test, int comp_str_stall_test ,
+  int mem_str_stall_test, int other_stall_test1, int other_stall_test2, int other_stall_test3);
+  bool replay_buffer_cycle_mem(int m_cluster_id, int MEM_ON, int mem_data_stall_test, int comp_data_stall_test, int ibuffer_stall_test, int comp_str_stall_test ,
+  int mem_str_stall_test, int other_stall_test1, int other_stall_test2, int other_stall_test3);
+  void cycle_predefined();
 
   // These are some common ordering fucntions that the
   // higher order schedulers can take advantage of
@@ -369,6 +622,20 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
       const typename std::vector<T> &input_list,
       const typename std::vector<T>::const_iterator &last_issued_from_input,
       unsigned num_warps_to_add);
+
+  template <typename T>
+  void order_fast(
+      typename std::vector<T> &result_list,
+      const typename std::vector<T> &input_list,
+      const typename std::vector<T>::const_iterator &last_issued_from_input,
+      unsigned num_warps_to_add, int m_cluster_id);
+
+  template <typename T>
+  void replay_order_fast(
+      typename std::vector<T> &result_list,
+      const typename std::vector<T> &input_list,
+      const typename std::vector<T>::const_iterator &last_issued_from_input,
+      unsigned num_warps_to_add, int m_cluster_id, int MEM_ON);
 
   enum OrderingType {
     // The item that issued last is prioritized first then the sorted result
@@ -389,7 +656,8 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
 
   // Derived classes can override this function to populate
   // m_supervised_warps with their scheduling policies
-  virtual void order_warps() = 0;
+  virtual void order_warps(int m_cluster_id) = 0;
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON) = 0;
 
   int get_schd_id() const { return m_id; }
 
@@ -397,6 +665,15 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
   virtual void do_on_warp_issued(
       unsigned warp_id, unsigned num_issued,
       const std::vector<shd_warp_t *>::const_iterator &prioritized_iter);
+
+  virtual void replay_do_on_warp_issued(
+      unsigned warp_id, unsigned num_issued,
+      const std::vector<shd_warp_t *>::const_iterator &prioritized_iter, int MEM_ON);
+
+  virtual void replay_do_on_warp_issued_mem(
+      unsigned warp_id, unsigned num_issued,
+      const std::vector<shd_warp_t *>::const_iterator &prioritized_iter, int MEM_ON);
+
   inline int get_sid() const;
 
  protected:
@@ -410,6 +687,10 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
   // one warp scheduler. In a single scheduler system, this is simply all
   // the warps assigned to this core.
   std::vector<shd_warp_t *> m_supervised_warps;
+  std::vector<shd_warp_t *> m_mem_warp_next_cycle;
+  std::vector<shd_warp_t *> m_comp_warp_next_cycle;
+  std::vector<shd_warp_t *>::const_iterator last_issued_from_input_mem;
+  std::vector<shd_warp_t *>::const_iterator last_issued_from_input_comp;
   // This is the iterator pointer to the last supervised warp you issued
   std::vector<shd_warp_t *>::const_iterator m_last_supervised_issued;
   shader_core_stats *m_stats;
@@ -431,6 +712,28 @@ class scheduler_unit {  // this can be copied freely, so can be used in std
   int m_id;
 };
 
+class fast_scheduler : public scheduler_unit {
+ public:
+  fast_scheduler(shader_core_stats *stats, shader_core_ctx *shader,
+                Scoreboard *scoreboard, simt_stack **simt,
+                std::vector<shd_warp_t *> *warp, register_set *sp_out,
+                register_set *dp_out, register_set *sfu_out,
+                register_set *int_out, register_set *tensor_core_out,
+                std::vector<register_set *> &spec_cores_out,
+                register_set *mem_out, int id)
+      : scheduler_unit(stats, shader, scoreboard, simt, warp, sp_out, dp_out,
+                       sfu_out, int_out, tensor_core_out, spec_cores_out,
+                       mem_out, id) {}
+  virtual ~fast_scheduler() {}
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
+  virtual void done_adding_supervised_warps() {
+    m_last_supervised_issued = m_supervised_warps.end();
+    last_issued_from_input_mem = m_supervised_warps.end();
+    last_issued_from_input_comp = m_supervised_warps.end();
+  }
+};
+
 class lrr_scheduler : public scheduler_unit {
  public:
   lrr_scheduler(shader_core_stats *stats, shader_core_ctx *shader,
@@ -444,7 +747,8 @@ class lrr_scheduler : public scheduler_unit {
                        sfu_out, int_out, tensor_core_out, spec_cores_out,
                        mem_out, id) {}
   virtual ~lrr_scheduler() {}
-  virtual void order_warps();
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
   virtual void done_adding_supervised_warps() {
     m_last_supervised_issued = m_supervised_warps.end();
   }
@@ -463,7 +767,8 @@ class gto_scheduler : public scheduler_unit {
                        sfu_out, int_out, tensor_core_out, spec_cores_out,
                        mem_out, id) {}
   virtual ~gto_scheduler() {}
-  virtual void order_warps();
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
   virtual void done_adding_supervised_warps() {
     m_last_supervised_issued = m_supervised_warps.begin();
   }
@@ -482,7 +787,8 @@ class oldest_scheduler : public scheduler_unit {
                        sfu_out, int_out, tensor_core_out, spec_cores_out,
                        mem_out, id) {}
   virtual ~oldest_scheduler() {}
-  virtual void order_warps();
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
   virtual void done_adding_supervised_warps() {
     m_last_supervised_issued = m_supervised_warps.begin();
   }
@@ -514,7 +820,8 @@ class two_level_active_scheduler : public scheduler_unit {
         (scheduler_prioritization_type)outer_level_readin;
   }
   virtual ~two_level_active_scheduler() {}
-  virtual void order_warps();
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
   void add_supervised_warp_id(int i) {
     if (m_next_cycle_prioritized_warps.size() < m_max_active_warps) {
       m_next_cycle_prioritized_warps.push_back(&warp(i));
@@ -549,7 +856,8 @@ class swl_scheduler : public scheduler_unit {
                 std::vector<register_set *> &spec_cores_out,
                 register_set *mem_out, int id, char *config_string);
   virtual ~swl_scheduler() {}
-  virtual void order_warps();
+  virtual void order_warps(int m_cluster_id);
+  virtual void replay_order_warps(int m_cluster_id, int MEM_ON);
   virtual void done_adding_supervised_warps() {
     m_last_supervised_issued = m_supervised_warps.begin();
   }
@@ -1501,6 +1809,14 @@ class shader_core_config : public core_config {
   // data
   char *gpgpu_shader_core_pipeline_opt;
   bool gpgpu_perfect_mem;
+  bool gpgpu_perfect_mem_data;
+  bool gpgpu_write_sched_order; // write sched order to file
+  bool gpgpu_follow_defined_sched_order;  // follow sched order from file
+  bool gpgpu_print_stall_data;
+  bool gpgpu_print_cout_statements;
+  bool gpgpu_sched_all_warps;
+  bool gpgpu_reply_buffer;
+  bool gpgpu_reply_buffer_seperate_mem_comp;
   bool gpgpu_clock_gated_reg_file;
   bool gpgpu_clock_gated_lanes;
   enum divergence_support_t model;
@@ -1588,12 +1904,15 @@ class shader_core_config : public core_config {
 
   unsigned mem2device(unsigned memid) const { return memid + n_simt_clusters; }
 
-  // Jin: concurrent kernel on sm
-  bool gpgpu_concurrent_kernel_sm;
-
   bool perfect_inst_const_cache;
+  bool perfect_control;
+  bool ignore_synchronization;
+  bool pending_write_ignore;
   unsigned inst_fetch_throughput;
   unsigned reg_file_port_throughput;
+
+  // Jin: concurrent kernel on sm
+  bool gpgpu_concurrent_kernel_sm;
 
   // specialized unit config strings
   char *specialized_unit_string[SPECIALIZED_UNIT_NUM];
@@ -2124,6 +2443,7 @@ class shader_core_ctx : public core_t {
   int test_res_bus(int latency);
   address_type next_pc(int tid) const;
   void fetch();
+  int fix_control_hazard(unsigned warp_id);
   void register_cta_thread_exit(unsigned cta_num, kernel_info_t *kernel);
 
   void decode();
@@ -2134,7 +2454,25 @@ class shader_core_ctx : public core_t {
   friend class LooseRoundRobbinScheduler;
   virtual void issue_warp(register_set &warp, const warp_inst_t *pI,
                   const active_mask_t &active_mask, unsigned warp_id,
-                  unsigned sch_id);
+                  unsigned sch_id, int sid);
+
+  virtual void issue_warp_push_in_replay(register_set &warp, const warp_inst_t *pI,
+                  const active_mask_t &active_mask, unsigned warp_id,
+                  unsigned sch_id, int replay_buffer_idx, int pc, int sid, int MEM_ON);
+
+  virtual void issue_warp_push_in_replay_mem(register_set &warp, const warp_inst_t *pI,
+                  const active_mask_t &active_mask, unsigned warp_id,
+                  unsigned sch_id, int replay_buffer_idx, int pc, int sid, int MEM_ON);
+
+  virtual void issue_warp_push_from_replay(register_set &warp, const warp_inst_t *pI,
+                  const active_mask_t &active_mask, unsigned warp_id,
+                  unsigned sch_id, int sid, int MEM_ON);
+
+  virtual void issue_warp_push_from_replay_mem(register_set &warp, const warp_inst_t *pI,
+                  const active_mask_t &active_mask, unsigned warp_id,
+                  unsigned sch_id, int sid, int MEM_ON);
+
+  virtual bool isSyncInst(const warp_inst_t *inst, int warp_num);
 
   void create_front_pipeline();
   void create_schedulers();
@@ -2148,6 +2486,12 @@ class shader_core_ctx : public core_t {
   virtual void checkExecutionStatusAndUpdate(warp_inst_t &inst, unsigned t,
                                              unsigned tid) = 0;
   virtual void func_exec_inst(warp_inst_t &inst) = 0;
+
+  virtual bool isSyncInstCore(const warp_inst_t *inst, int warp_num) = 0;
+  virtual void func_exec_inst_updatePCOnly(warp_inst_t &inst, int warp_num) = 0;
+  // executes the inst, does not update any PC information, executed when pushing instruction out 
+  // of OOO (replay) queue
+  virtual void func_exec_inst_ExecInstOnly(warp_inst_t &inst, int warp_num) = 0;
 
   virtual unsigned sim_init_thread(kernel_info_t &kernel,
                                    ptx_thread_info **thread_info, int sid,
@@ -2283,6 +2627,13 @@ class exec_shader_core_ctx : public shader_core_ctx {
   virtual void checkExecutionStatusAndUpdate(warp_inst_t &inst, unsigned t,
                                              unsigned tid);
   virtual void func_exec_inst(warp_inst_t &inst);
+  virtual bool isSyncInstCore(const warp_inst_t* inst, int warp_num);
+  // only updates if PC was last PC to execute for fetch to be correct 
+  // Executed when pushing instruction from normal queue to OOO (replay) queue
+  virtual void func_exec_inst_updatePCOnly(warp_inst_t &inst, int warp_num);
+  // executes the inst, does not update any PC information, executed when pushing instruction out 
+  // of OOO (replay) queue
+  virtual void func_exec_inst_ExecInstOnly(warp_inst_t &inst, int warp_num);
   virtual unsigned sim_init_thread(kernel_info_t &kernel,
                                    ptx_thread_info **thread_info, int sid,
                                    unsigned tid, unsigned threads_left,
@@ -2345,9 +2696,9 @@ class simt_core_cluster {
   float get_current_occupancy(unsigned long long &active,
                               unsigned long long &total) const;
   virtual void create_shader_core_ctx() = 0;
+  unsigned m_cluster_id;
 
  protected:
-  unsigned m_cluster_id;
   gpgpu_sim *m_gpu;
   const shader_core_config *m_config;
   shader_core_stats *m_stats;

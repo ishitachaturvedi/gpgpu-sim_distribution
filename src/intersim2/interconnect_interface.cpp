@@ -45,6 +45,7 @@
 #include "intersim_config.hpp"
 #include "network.hpp"
 #include "trace.h"
+#include "../gpgpu-sim/fast.h"
 
 InterconnectInterface* InterconnectInterface::New(const char* const config_file)
 {
@@ -266,7 +267,9 @@ bool InterconnectInterface::HasBuffer(unsigned deviceID, unsigned int size) cons
   has_buffer = _traffic_manager->_input_queue[0][icntID][0].size() +n_flits <= _input_buffer_capacity;
 
   if ((_subnets>1) && deviceID >= _n_shader) // deviceID is memory node
+  {
     has_buffer = _traffic_manager->_input_queue[1][icntID][0].size() +n_flits <= _input_buffer_capacity;
+  }
 
   return has_buffer;
 }

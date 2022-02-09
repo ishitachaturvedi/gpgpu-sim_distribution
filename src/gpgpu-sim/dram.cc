@@ -35,6 +35,9 @@
 #include "l2cache.h"
 #include "mem_fetch.h"
 #include "mem_latency_stat.h"
+#include <iostream>
+
+using namespace std;
 
 #ifdef DRAM_VERIFY
 int PRINT_CYCLE = 0;
@@ -255,6 +258,7 @@ void dram_t::push(class mem_fetch *data) {
 
   // stats...
   n_req += 1;
+  n_req_tot++;
   n_req_partial += 1;
   if (m_config->scheduler_type == DRAM_FRFCFS) {
     unsigned nreqs = m_frfcfs_scheduler->num_pending();
@@ -353,7 +357,12 @@ void dram_t::cycle() {
     if (bk[i]->mrq) memory_pending++;
   }
   banks_1time += memory_pending;
-  if (memory_pending > 0) banks_acess_total++;
+  banks_1time_total += memory_pending;
+  if (memory_pending > 0) 
+  {
+    banks_acess_total++;
+    banks_acess_total_Ishita++;
+  }
 
   unsigned int memory_pending_rw = 0;
   unsigned read_blp_rw = 0;
@@ -377,11 +386,13 @@ void dram_t::cycle() {
     }
   }
   banks_time_rw += memory_pending_rw;
+  banks_time_rw_total += memory_pending_rw;
   bkgrp_parallsim_rw += bnkgrp_rw_found.count();
   if (memory_pending_rw > 0) {
     write_to_read_ratio_blp_rw_average +=
         (double)write_blp_rw / (write_blp_rw + read_blp_rw);
     banks_access_rw_total++;
+    banks_access_rw_total_Ishita++;
   }
 
   unsigned int memory_Pending_ready = 0;
@@ -398,7 +409,11 @@ void dram_t::cycle() {
     }
   }
   banks_time_ready += memory_Pending_ready;
-  if (memory_Pending_ready > 0) banks_access_ready_total++;
+  banks_time_ready_total += memory_Pending_ready;
+  if (memory_Pending_ready > 0)
+  {
+    banks_access_ready_total_Ishita++;
+  } banks_access_ready_total++;
   ///////////////////////////////////////////////////////////////////////////////////
 
   bool issued_col_cmd = false;
@@ -574,9 +589,13 @@ bool dram_t::issue_col_command(int j) {
       if (bk[j]->mrq->data->get_access_type() == L2_WR_ALLOC_R)
         n_rd_L2_A++;
       else
+      {
         n_rd++;
+        n_rd_tot++;
+      }
 
       bwutil += m_config->BL / m_config->data_command_freq_ratio;
+      bwutil_total += m_config->BL / m_config->data_command_freq_ratio;
       bwutil_partial += m_config->BL / m_config->data_command_freq_ratio;
       bk[j]->n_access++;
 
@@ -610,8 +629,12 @@ bool dram_t::issue_col_command(int j) {
       if (bk[j]->mrq->data->get_access_type() == L2_WRBK_ACC)
         n_wr_WB++;
       else
+      {
         n_wr++;
+        n_wr_tot++;
+      }
       bwutil += m_config->BL / m_config->data_command_freq_ratio;
+      bwutil_total += m_config->BL / m_config->data_command_freq_ratio;
       bwutil_partial += m_config->BL / m_config->data_command_freq_ratio;
 #ifdef DRAM_VERIFY
       PRINT_CYCLE = 1;
@@ -655,6 +678,7 @@ bool dram_t::issue_row_command(int j) {
       issued = true;
       n_act_partial++;
       n_act++;
+      n_act_tot++;
     }
 
     else
@@ -669,6 +693,7 @@ bool dram_t::issue_row_command(int j) {
       prio = (j + 1) % m_config->nbk;
       issued = true;
       n_pre++;
+      n_pre_tot++;
       n_pre_partial++;
 #ifdef DRAM_VERIFY
       PRINT_CYCLE = 1;

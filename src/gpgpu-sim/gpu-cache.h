@@ -632,7 +632,11 @@ class cache_config {
           "Invalid cache configuration: FETCH_ON_WRITE and LAZY_FETCH_ON_READ "
           "cannot work properly with ON_FILL policy. Cache must be ON_MISS. ");
     }
+
     if (m_cache_type == SECTOR) {
+
+      std::cout << "m_line_sz "<<m_line_sz<<" SECTOR_SIZE "<<SECTOR_SIZE<<" m_line_sz / SECTOR_SIZE "<<(m_line_sz / SECTOR_SIZE)<<" SECTOR_CHUNCK_SIZE "<<SECTOR_CHUNCK_SIZE<<"\n";
+
       assert(m_line_sz / SECTOR_SIZE == SECTOR_CHUNCK_SIZE &&
              m_line_sz % SECTOR_SIZE == 0);
     }

@@ -118,8 +118,12 @@ class mem_fetch {
   }
 
   address_type get_pc() const { return m_inst.empty() ? -1 : m_inst.pc; }
-  const warp_inst_t &get_inst() { return m_inst; }
+  //const warp_inst_t &get_inst() { return m_inst; }
+  warp_inst_t &get_inst() { return m_inst; }
   enum mem_fetch_status get_status() const { return m_status; }
+
+  void set_cycle_issued(int cycle) { cycle_issued = cycle; }
+  int get_cycle_issued() const { return cycle_issued; }
 
   const memory_config *get_mem_config() { return m_mem_config; }
 
@@ -127,6 +131,7 @@ class mem_fetch {
 
   mem_fetch *get_original_mf() { return original_mf; }
   mem_fetch *get_original_wr_mf() { return original_wr_mf; }
+  unsigned long long get_status_change_cycle() { return m_status_change; }
 
  private:
   // request source information
@@ -134,6 +139,7 @@ class mem_fetch {
   unsigned m_sid;
   unsigned m_tpc;
   unsigned m_wid;
+  int cycle_issued;
 
   // where is this request now?
   enum mem_fetch_status m_status;

@@ -36,6 +36,10 @@
 
 #include "local_interconnect.h"
 #include "mem_fetch.h"
+#include "fast.h"
+#include <iostream>
+
+using namespace std;
 
 xbar_router::xbar_router(unsigned router_id, enum Interconnect_type m_type,
                          unsigned n_shader, unsigned n_mem,
@@ -52,6 +56,7 @@ xbar_router::xbar_router(unsigned router_id, enum Interconnect_type m_type,
   out_buffers.resize(total_nodes);
   next_node.resize(total_nodes, 0);
   in_buffer_limit = m_localinct_config.in_buffer_limit;
+  tot_icnt_buffer = in_buffer_limit;
   out_buffer_limit = m_localinct_config.out_buffer_limit;
   arbit_type = m_localinct_config.arbiter_algo;
   next_node_id = 0;
@@ -103,6 +108,7 @@ bool xbar_router::Has_Buffer_In(unsigned input_deviceID, unsigned size,
   bool has_buffer =
       (in_buffers[input_deviceID].size() + size <= in_buffer_limit);
   if (update_counter && !has_buffer) in_buffer_full++;
+  icnt_pressure[input_deviceID] = in_buffers[input_deviceID].size() + size;
 
   return has_buffer;
 }

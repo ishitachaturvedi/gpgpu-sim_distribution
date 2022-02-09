@@ -113,6 +113,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <iostream>
 #ifdef OPENGL_SUPPORT
 #define GL_GLEXT_PROTOTYPES
 #ifdef __APPLE__
@@ -262,6 +263,7 @@ gpgpu_context *GPGPU_Context() {
 }
 
 void ptxinfo_data::ptxinfo_addinfo() {
+    std::cout << "CUDART_VERSION " <<" "<<(CUDART_VERSION)<<"\n";
   CUctx_st *context = GPGPUSim_Context(gpgpu_ctx);
   if (!get_ptxinfo_kname()) {
     /* This info is not per kernel (since CUDA 5.0 some info (e.g. gmem, and
@@ -454,6 +456,7 @@ char *get_app_binary_name(std::string abs_path) {
 }
 
 static int get_app_cuda_version() {
+  std::cout << "CUDART_VERSION " <<" "<<(CUDART_VERSION)<<"\n";
   int app_cuda_version = 0;
   char fname[1024];
   snprintf(fname, 1024, "_app_cuda_version_XXXXXX");
@@ -509,6 +512,7 @@ cudaError_t cudaSetDeviceInternal(int device, gpgpu_context *gpgpu_ctx = NULL) {
 
 cudaError_t cudaGetDeviceInternal(int *device,
                                   gpgpu_context *gpgpu_ctx = NULL) {
+    std::cout << "CUDART_VERSION " <<" "<<(CUDART_VERSION)<<"\n";
   gpgpu_context *ctx;
   if (gpgpu_ctx) {
     ctx = gpgpu_ctx;
@@ -607,6 +611,7 @@ void **cudaRegisterFatBinaryInternal(void *fatCubin,
     if (pos == std::string::npos) {
       // Not pytorch app : checking cuda version
       int app_cuda_version = get_app_cuda_version();
+
       assert(
           app_cuda_version == CUDART_VERSION / 1000 &&
           "The app must be compiled with same major version as the simulator.");
@@ -3002,7 +3007,7 @@ void cuda_runtime_api::extract_ptx_files_using_cuobjdump(CUctx_st *context) {
 
   // only want file names
   snprintf(command, 1000,
-           "$CUDA_INSTALL_PATH/bin/cuobjdump -lptx %s  | cut -d \":\" -f 2 | "
+           "$CUDA_INSTALL_PATH/bin/cuobjdump -all -lptx %s  | cut -d \":\" -f 2 | "
            "awk '{$1=$1}1' > %s",
            app_binary.c_str(), ptx_list_file_name);
   if (system(command) != 0) {
@@ -3019,7 +3024,7 @@ void cuda_runtime_api::extract_ptx_files_using_cuobjdump(CUctx_st *context) {
       // int pos = line.find(std::string(get_app_binary_name(app_binary)));
       const char *ptx_file = line.c_str();
       printf("Extracting specific PTX file named %s \n", ptx_file);
-      snprintf(command, 1000, "$CUDA_INSTALL_PATH/bin/cuobjdump -xptx %s %s",
+      snprintf(command, 1000, "$CUDA_INSTALL_PATH/bin/cuobjdump -all -xptx %s %s",
                ptx_file, app_binary.c_str());
       if (system(command) != 0) {
         printf("ERROR: command: %s failed \n", command);
@@ -3096,11 +3101,11 @@ void cuda_runtime_api::extract_code_using_cuobjdump() {
     close(fd);
     if (!gpgpu_ctx->device_runtime->g_cdp_enabled)
       snprintf(command, 1000,
-               "$CUDA_INSTALL_PATH/bin/cuobjdump -ptx -elf -sass %s > %s",
+               "$CUDA_INSTALL_PATH/bin/cuobjdump -all -ptx -elf -sass %s > %s",
                app_binary.c_str(), fname);
     else
       snprintf(command, 1000,
-               "$CUDA_INSTALL_PATH/bin/cuobjdump -ptx -elf -sass -all %s > %s",
+               "$CUDA_INSTALL_PATH/bin/cuobjdump -all -ptx -elf -sass -all %s > %s",
                app_binary.c_str(), fname);
     bool parse_output = true;
     result = system(command);
@@ -3176,7 +3181,7 @@ void cuda_runtime_api::extract_code_using_cuobjdump() {
         std::stringstream libcodfn;
         libcodfn << "_cuobjdump_complete_lib_" << cnt << "_";
         cmd.str("");  // resetting
-        cmd << "$CUDA_INSTALL_PATH/bin/cuobjdump -ptx -elf -sass ";
+        cmd << "$CUDA_INSTALL_PATH/bin/cuobjdump -all -ptx -elf -sass ";
         cmd << line;
         cmd << " > ";
         cmd << libcodfn.str();
@@ -3595,7 +3600,7 @@ unsigned CUDARTAPI __cudaPushCallConfiguration(dim3 gridDim, dim3 blockDim,
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  cudaConfigureCallInternal(gridDim, blockDim, sharedMem, stream);
+  return cudaConfigureCallInternal(gridDim, blockDim, sharedMem, stream);
 }
 
 cudaError_t CUDARTAPI __cudaPopCallConfiguration(dim3 *gridDim, dim3 *blockDim,
@@ -4718,8 +4723,16 @@ CUresult CUDAAPI cuMemHostRegister(void *p, size_t bytesize,
   printf("WARNING: this function has not been implemented yet.");
   return CUDA_SUCCESS;
 }
-__host__ cudaError_t cudaHostRegister(void *ptr, size_t size,
+extern "C" __host__ cudaError_t CUDARTAPI cudaHostRegister(void *ptr, size_t size,
                                       unsigned int flags) {
+  if (g_debug_execution >= 3) {
+    announce_call(__my_func__);
+  }
+  printf("WARNING: this function has not been implemented yet.");
+  return g_last_cudaError = cudaSuccess;
+}
+
+extern "C" __host__ cudaError_t cudaHostUnregister(void *p) {
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
@@ -5182,8 +5195,8 @@ CUresult CUDAAPI cuPointerGetAttribute(void *data,
 }
 #endif /* CUDART_VERSION >= 4000 */
 
-#if CUDART_VERSION >= 8000
-__host__ cudaError_t CUDARTAPI cudaCreateTextureObject(
+#if CUDART_VERSION >= 8000 // CHANGE
+extern "C" __host__ cudaError_t CUDARTAPI cudaCreateTextureObject(
     cudaTextureObject_t *pTexObject, const cudaResourceDesc *pResDesc,
     const cudaTextureDesc *pTexDesc, const cudaResourceViewDesc *pResViewDesc) {
   if (g_debug_execution >= 3) {

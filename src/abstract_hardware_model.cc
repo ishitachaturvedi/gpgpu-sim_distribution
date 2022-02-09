@@ -39,6 +39,9 @@
 #include "gpgpu-sim/gpu-sim.h"
 #include "gpgpusim_entrypoint.h"
 #include "option_parser.h"
+#include <iostream>
+
+using namespace std;
 
 void mem_access_t::init(gpgpu_context *ctx) {
   gpgpu_ctx = ctx;
@@ -50,6 +53,30 @@ void warp_inst_t::issue(const active_mask_t &mask, unsigned warp_id,
                         unsigned long long cycle, int dynamic_warp_id,
                         int sch_id) {
   m_warp_active_mask = mask;
+  m_warp_issued_mask = mask;
+  m_uid = ++(m_config->gpgpu_ctx->warp_inst_sm_next_uid);
+  m_warp_id = warp_id;
+  m_dynamic_warp_id = dynamic_warp_id;
+  issue_cycle = cycle;
+  cycles = initiation_interval;
+  m_cache_hit = false;
+  m_empty = false;
+  m_scheduler_id = sch_id;
+}
+
+void warp_inst_t::issue_push_to_replay(const active_mask_t &mask, unsigned warp_id,
+                        unsigned long long cycle, int dynamic_warp_id,
+                        int sch_id) {
+  m_warp_active_mask = mask;
+  m_warp_id = warp_id;
+  m_cache_hit = false;
+  m_empty = false;
+  m_scheduler_id = sch_id;
+}
+
+void warp_inst_t::issue_push_from_replay(const active_mask_t &mask, unsigned warp_id,
+                        unsigned long long cycle, int dynamic_warp_id,
+                        int sch_id) {
   m_warp_issued_mask = mask;
   m_uid = ++(m_config->gpgpu_ctx->warp_inst_sm_next_uid);
   m_warp_id = warp_id;
@@ -116,6 +143,7 @@ void move_warp(warp_inst_t *&dst, warp_inst_t *&src) {
 }
 
 void gpgpu_functional_sim_config::reg_options(class OptionParser *opp) {
+  std::cout << "CUDART_VERSION " <<" "<<(CUDART_VERSION)<<"\n";
   option_parser_register(opp, "-gpgpu_ptx_use_cuobjdump", OPT_BOOL,
                          &m_ptx_use_cuobjdump,
                          "Use cuobjdump to extract ptx and sass from binaries",
@@ -687,7 +715,7 @@ void warp_inst_t::memory_coalescing_arch_reduce_and_send(
     new_addr_type addr, unsigned segment_size) {
   assert((addr & (segment_size - 1)) == 0);
 
-  const std::bitset<4> &q = info.chunks;
+  const std::bitset<4> &q = info.chunks;  // change_Ishita 4
   assert(q.count() >= 1);
   std::bitset<2> h;  // halves (used to check if 64 byte segment can be
                      // compressed into a single 32 byte segment)
@@ -1032,7 +1060,7 @@ void simt_stack::print_checkpoint(FILE *fout) const {
 
 void simt_stack::update(simt_mask_t &thread_done, addr_vector_t &next_pc,
                         address_type recvg_pc, op_type next_inst_op,
-                        unsigned next_inst_size, address_type next_inst_pc) {
+                        unsigned next_inst_size, address_type next_inst_pc, int warpId) {
   assert(m_stack.size() > 0);
 
   assert(next_pc.size() == m_warp_size);
@@ -1188,6 +1216,32 @@ void core_t::execute_warp_inst_t(warp_inst_t &inst, unsigned warpId) {
   }
 }
 
+void core_t::execute_warp_inst_t_updatePCOnly(warp_inst_t &inst, unsigned warpId) {
+  for (unsigned t = 0; t < m_warp_size; t++) {
+    if (inst.active(t)) {
+      if (warpId == (unsigned(-1))) warpId = inst.warp_id();
+      unsigned tid = m_warp_size * warpId + t;
+      // virtual function
+      checkExecutionStatusAndUpdate(inst, t, tid);
+    }
+  }
+}
+
+void core_t::execute_warp_inst_t_ExecInstOnly(warp_inst_t &inst, unsigned warpId) {
+  for (unsigned t = 0; t < m_warp_size; t++) {
+    if (inst.active(t)) {
+      if (warpId == (unsigned(-1))) warpId = inst.warp_id();
+      unsigned tid = m_warp_size * warpId + t;
+      m_thread[tid]->ptx_exec_inst(inst, t);
+    }
+  }
+}
+
+bool core_t::isSyncInstExec(const warp_inst_t *inst, int warp_num) {
+  unsigned tid = m_warp_size * warp_num;
+  return m_thread[tid]->isSyncInst(inst, 0);
+}
+
 bool core_t::ptx_thread_done(unsigned hw_thread_id) const {
   return ((m_thread[hw_thread_id] == NULL) ||
           m_thread[hw_thread_id]->is_done());
@@ -1208,7 +1262,7 @@ void core_t::updateSIMTStack(unsigned warpId, warp_inst_t *inst) {
     }
   }
   m_simt_stack[warpId]->update(thread_done, next_pc, inst->reconvergence_pc,
-                               inst->op, inst->isize, inst->pc);
+                               inst->op, inst->isize, inst->pc, warpId);
 }
 
 //! Get the warp to be executed using the data taken form the SIMT stack

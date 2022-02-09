@@ -39,6 +39,7 @@
 #include "addrdec.h"
 #include "gpu-cache.h"
 #include "shader.h"
+#include "fast.h"
 
 // constants for statistics printouts
 #define GPU_RSTAT_SHD_INFO 0x1
@@ -492,7 +493,22 @@ class gpgpu_sim : public gpgpu_t {
   void init();
   void cycle();
   bool active();
+
+  int gpu_max_insn_opt_val() { m_config.gpu_max_insn_opt; } 
+
   bool cycle_insn_cta_max_hit() {
+
+    std::cout << "CYCLE_CTA_MAX "<<tot_cycles_exec_all_SM<<" "<<(gpu_tot_sim_insn + gpu_sim_insn)<<" "<<m_config.gpu_max_insn_opt<<" "<<
+    (m_config.gpu_max_cycle_opt && (gpu_tot_sim_cycle + gpu_sim_cycle) >=
+                                              m_config.gpu_max_cycle_opt)<<" "
+          <<(m_config.gpu_max_insn_opt &&
+            (gpu_tot_sim_insn + gpu_sim_insn) >= m_config.gpu_max_insn_opt) <<" "
+          <<(m_config.gpu_max_cta_opt &&
+            (gpu_tot_issued_cta >= m_config.gpu_max_cta_opt)) <<" "
+          << (m_config.gpu_max_completed_cta_opt &&
+            (gpu_completed_cta >= m_config.gpu_max_completed_cta_opt)) <<"\n";
+
+
     return (m_config.gpu_max_cycle_opt && (gpu_tot_sim_cycle + gpu_sim_cycle) >=
                                               m_config.gpu_max_cycle_opt) ||
            (m_config.gpu_max_insn_opt &&
@@ -565,6 +581,9 @@ class gpgpu_sim : public gpgpu_t {
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
 
+  //// configuration parameters ////
+  const gpgpu_sim_config &m_config;
+
  private:
   // clocks
   void reinit_clock_domains(void);
@@ -607,9 +626,6 @@ class gpgpu_sim : public gpgpu_t {
 
   // debug
   bool gpu_deadlock;
-
-  //// configuration parameters ////
-  const gpgpu_sim_config &m_config;
 
   const struct cudaDeviceProp *m_cuda_properties;
   const shader_core_config *m_shader_config;
