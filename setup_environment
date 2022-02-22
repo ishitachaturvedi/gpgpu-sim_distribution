@@ -34,7 +34,7 @@ export PATH=$GPGPUSIM_ROOT/bin:$CUDA_INSTALL_PATH/bin:$PATH
 
 # to run the debug build of GPGPU-Sim run:
 # source setup_environment debug
-NVCC_PATH=`which nvcc`;
+NVCC_PATH=`/usr/bin/which nvcc`;
 if [ $? = 1 ]; then
 	echo "";
 	echo "ERROR ** nvcc (from CUDA Toolkit) was not found in PATH but required to build GPGPU-Sim.";
@@ -95,7 +95,6 @@ else
 	export LD_LIBRARY_PATH=`echo $LD_LIBRARY_PATH | sed -re 's#'$GPGPUSIM_ROOT'\/lib\/[0-9]+\/(debug|release):##'`
 	export LD_LIBRARY_PATH=$GPGPUSIM_ROOT/lib/$GPGPUSIM_CONFIG:$LD_LIBRARY_PATH
 fi
-
 
 # The following sets OPENCL_REMOTE_GPU_HOST which is used by GPGPU-Sim to
 # SSH to remote node to generate PTX for OpenCL kernels when running on 

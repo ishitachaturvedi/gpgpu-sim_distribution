@@ -2447,7 +2447,7 @@ void scheduler_unit::cycle(int m_cluster_id) {
             }
           }
         }
-      } else if (valid) {
+      } else if (valid && !pI) {
 
         // this case can happen after a return instruction in diverged warp
         SCHED_DPRINTF(

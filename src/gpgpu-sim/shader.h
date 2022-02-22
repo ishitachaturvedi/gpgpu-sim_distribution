@@ -456,7 +456,7 @@ class shd_warp_t {
   class shader_core_ctx * get_shader() { return m_shader; }
  private:
   static const unsigned IBUFFER_SIZE = 2;
-  static const unsigned REPLAY_BUFFER_SIZE = 1;
+  static const unsigned REPLAY_BUFFER_SIZE = 2;
   static const unsigned REPLAY_BUFFER_SIZE_MEM = 1;
   class shader_core_ctx *m_shader;
   unsigned m_cta_id;
